@@ -1,0 +1,100 @@
+100: Bileto Bot 2016-09-06 {15.04.0+16.10.20160906-0ubuntu1} Releasing 15.04.0+16.10.20160906-0ubuntu1
+99: Ted Gould 2016-09-06 [merge] Adjusting all the waits to be 60 seconds
+98: CI Train Bot 2015-10-02 {15.04.0+15.10.20151002-0ubuntu1} Releasing 15.04.0+15.10.20151002-0ubuntu1
+97: Iain Lane 2015-10-02 [merge] Add bustle-pcap to Depends for the DEP8 tests. This was recently split out of bustle to its own package.
+96: Lars Uebernickel 2015-10-02 [merge] test-param-wait-system: fix race between tasks
+95: CI Train Bot 2015-02-18 {15.04.0+15.04.20150218-0ubuntu1} Releasing 15.04.0+15.04.20150218-0ubuntu1
+94: CI Train Bot 2015-02-18 Replaced 0replaceme with real versions.
+93: Ted Gould 2015-02-18 [merge] Add function to remove tasks from the service
+92: CI Train Bot 2015-02-02 {15.04.0+15.04.20150202.3-0ubuntu1} Releasing 15.04.0+15.04.20150202.3-0ubuntu1
+91: CI Train Bot 2015-02-02 Replaced 0replaceme with real versions.
+90: Ted Gould 2015-02-02 [merge] Make watching the task use the same bus the task is on 
+89: CI Train Bot 2015-01-20 {15.04.0+15.04.20150120.1-0ubuntu1} Releasing 15.04.0+15.04.20150120.1-0ubuntu1
+88: David Riebenbauer 2015-01-20 [merge] Bump glib dependency to 2.34 Fixes: #1111485
+87: CI Train Bot 2014-12-09 {15.04.0+15.04.20141209-0ubuntu1} Releasing 15.04.0+15.04.20141209-0ubuntu1
+86: CI Train Bot 2014-12-09 Replaced 0replaceme with real versions.
+85: Ted Gould 2014-12-09 [merge] Add ability to run as the system bus 
+84: CI bot 2014-09-08 {14.04.1+14.10.20140908-0ubuntu1} Releasing 14.04.1+14.10.20140908-0ubuntu1
+83: Ted Gould 2014-09-08 [merge] Drop gvfs-backends because no one can figure out why it is there. Fixes: 1296329
+82: Iain Lane 2014-06-11 [merge] Sync the archive uploads which were to fix the autopkgtests
+81: CI bot 2014-03-20 {14.04.1+14.04.20140320-0ubuntu1} Releasing 14.04.1+14.04.20140320-0ubuntu1
+80: Ted Gould 2014-03-20 [merge] Emit properties changed when updating a property 
+79: Ted Gould 2014-03-20 [merge] Merge policy and manual test 
+78: CI bot 2014-02-26 {14.04.0+14.04.20140226-0ubuntu1} Releasing 14.04.0+14.04.20140226-0ubuntu1
+77: Ted Gould 2014-02-26 [merge] Grab the bus so we can ensure it closes before starting the next test 
+76: CI bot 2014-02-17 {14.04.0+14.04.20140217.1-0ubuntu1} Releasing 14.04.0+14.04.20140217.1-0ubuntu1
+75: Ted Gould 2014-02-17 [merge] Flushing trunk with a release 
+74: Ted Gould 2014-01-15 [merge] Support having objects with different interfaces on the same path.
+73: Ken VanDine 2014-01-07 [merge] Sync packaging changes uploaded to the archive back to trunk
+72: Charles Kerr 2013-12-20 [merge] fix leaks by always g_free()ing the return value of g_get_current_dir().
+71: Ted Gould 2013-12-18 [merge] Make sure to not clear the watcher if it fired. Fixes: https://bugs.launchpad.net/bugs/1260779.
+70: Automatic PS uploader 2013-11-26 [merge] Releasing 14.04.0+14.04.20131126-0ubuntu1 (revision 69 from lp:dbus-test-runner).
+69: Ted Gould 2013-11-18 [merge] Add a DBus Mock task.
+68: Timo Jyrinki 2013-10-31 Sync with what was uploaded to archives:
+67: Steve Langasek 2013-10-30 [merge] Add Multi-Arch and Vcs-* entries in debian/control. Fixes: https://bugs.launchpad.net/bugs/1246074.
+66: Automatic PS uploader 2013-07-24 [merge] Releasing 12.10.2+13.10.20130724-0ubuntu1 (revision 65 from lp:dbus-test-runner).
+65: Michal Hruby 2013-07-22 [merge] Watch created pipes for the G_IO_HUP event, as when a pipe closes, polling it will return this event.
+64: Automatic PS uploader 2013-07-17 [merge] Releasing 12.10.2+13.10.20130717-0ubuntu1 (revision 63 from lp:dbus-test-runner).
+63: Alberto Mardegan 2013-07-16 [merge] Propagate the current environment to activated services
+62: Automatic PS uploader 2013-06-07 [merge] Releasing 12.10.2daily13.06.05-0ubuntu1 to ubuntu.
+61: Automatic PS uploader 2013-05-03 [merge] Releasing 12.10.2daily13.05.03ubuntu.unity.next-0ubuntu1 to ubuntu.
+60: Automatic PS uploader 2013-02-26 [merge] Releasing 12.10.2daily13.02.26-0ubuntu1 to ubuntu.
+59: David Barth 2013-02-25 [merge] This ensures that dbus-test-runner still builds on 12.04, by wrapping the use of the new g_clear_pointer with a macro on older glibs.
+58: Automatic PS uploader 2013-02-15 [merge] Releasing 12.10.2daily13.02.15.1-0ubuntu1 to ubuntu.
+57: Mathieu Trudel-Lapierre 2013-02-14 [merge] Set dbus-daemon in a process group so we can kill all its children in the process tree (and itself) when we reach the task timeout. Fixes: https://bugs.launchpad.net/bugs/1122948.
+56: Automatic PS uploader 2013-02-04 [merge] Releasing 12.10.2daily13.01.31-0ubuntu1 to ubuntu.
+55: Ted Gould 2013-01-30 [merge] Don't include g_type_init() on newer GLib's.
+54: Ted Gould 2013-01-29 [merge] Adding in a watchdog for the DBus daemon
+53: Automatic PS uploader 2013-01-10 [merge] Releasing 12.10.2daily13.01.10-0ubuntu1 to ubuntu.
+52: Mathieu Trudel-Lapierre 2013-01-08 [merge] Make bustle tests conditional.
+51: Didier Roche 2013-01-08 [merge] Add bootstrap message.
+50: Ted Gould 2013-01-07 [merge] Inline packaging.
+49: Ted Gould 2012-12-17 [merge] Add support for bustle 0.4.x.
+48: Charles Kerr 2012-10-03 {12.10.1} 12.10.1
+47: Charles Kerr 2012-10-03 [merge] merge lp:~ted/dbus-test-runner/distcheck-fix to fix 'make distcheck'
+46: Ted Gould 2012-10-03 [merge] Add option to wait until task complete. Fixes: https://bugs.launchpad.net/bugs/1053168. Approved by jenkins, Charles Kerr.
+45: Ted Gould 2012-10-03 [merge] Adding a clearing of the buffers to make tests pass on slow systems. Fixes: https://bugs.launchpad.net/bugs/1010739. Approved by jenkins, Charles Kerr.
+44: Charles Kerr 2012-07-11 {12.10.0} 12.10.0
+43: Charles Kerr 2012-07-11 {12.10.11} 12.10.11
+42: Ted Gould 2012-06-22 [merge] Disabling test-output to unblock Jenkings.  Tracked in LP: #1010739. Approved by .
+41: Ted Gould 2012-04-23 [merge] Bringing coverage up to spec with other projects
+40: Ted Gould 2012-04-23 [merge] Splitting out the internals into a testing library
+39: Ted Gould 2012-02-20 {0.0.5} 0.0.5
+38: Ted Gould 2012-02-20 Make sure the session bus thinks it's a session bus
+37: Ted Gould 2011-12-13 [merge] Increase the test coverage of the test suite
+36: Ted Gould 2011-12-13 [merge] Adding in basic coverage support
+35: Ted Gould 2011-11-28 {0.0.4} 0.0.4
+34: Ted Gould 2011-11-28 [merge] Support waiting for a name before starting up a new task
+33: Ted Gould 2011-11-28 [merge] Fix a warning in the arguments of the test runner
+32: Ted Gould 2011-11-28 [merge] Adding a maximum wait time for the test runner or it'll fail
+31: Ted Gould 2011-01-28 {0.0.3} 0.0.3
+30: Ted Gould 2011-01-28 Launching the shell script from the right dir
+29: Ted Gould 2011-01-28 Better handle tasks that can't be started
+28: Ted Gould 2011-01-28 Adding debugging info when starting tasks.
+27: Ted Gould 2011-01-28 Adding a little sleep before signaling to make the tests more reliable
+26: Ken VanDine 2010-12-15 Added copyright/license header matching COPYING file
+25: Ted Gould 2010-12-07 {0.0.2} 0.0.2
+24: Ted Gould 2009-12-09 [merge] Handling the cases where the bustle process sends out data without a loop.  Fixes a bug.  Add a test to recreate the bug.
+23: Ted Gould 2009-12-08 [merge] Adding the ability to record the messages on the buss using bustle-dbus-monitor.
+22: Ted Gould 2009-12-04 [merge] Add better tracking of referencing the tasks and freeing them better.
+21: Ted Gould 2009-12-03 [merge] Explicitly killing dbus at the end of the run.
+20: Ted Gould 2009-12-02 Ignoring our test scripts
+19: Ted Gould 2009-12-02 Making the rm delay slightly for distcheck to pass.
+18: Ted Gould 2009-12-02 Switching the tests to use autotest.  Better output.
+17: Ted Gould 2009-08-19 Using AM 1.11 silent mode
+16: Ted Gould 2009-06-17 Now we have a parameter test
+15: Ted Gould 2009-06-17 Adding in an option for parameters.
+14: Ted Gould 2009-06-05 Switching around the environment handling to allow for env variables to go through to the called tasks.  This is especially important for all the x variables.
+13: Ted Gould 2009-04-27 Oops, should be the data dir.
+12: Ted Gould 2009-04-27 Making the default session dictory part of the build system.
+11: Ted Gould 2009-04-23 Version 0.0.2dev
+10: Ted Gould 2009-04-23 {0.0.1} Woo hoo, now we can distcheck
+9: Ted Gould 2009-04-23 Not sure why I need this, but it solves the problem.
+8: Ted Gould 2009-04-23 Adding in translation, not quite sure why, but why not
+7: Ted Gould 2009-04-23 Making the tests work better by getting automake involved
+6: Ted Gould 2009-04-23 Fleshing out this build system real nice now.
+5: Ted Gould 2009-04-23 Silly GNU files.
+4: Ted Gould 2009-04-23 Building a build system, first start.
+3: Ted Gould 2009-04-23 Making some directories.
+2: Ted Gould 2009-04-23 Ignore it all
+1: Ted Gould 2009-04-23 Getting into version control

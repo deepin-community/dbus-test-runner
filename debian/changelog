@@ -1,0 +1,103 @@
+dbus-test-runner (16.10.0~bzr100+repack1-4.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * debian/patches/dont-build-with-werror.patch: Don't build with -Werror;
+    this is a bad idea for release builds as it means you get build failures
+    for deprecations (Closes: #941488)
+  * debian/patches/replace-deprecated-functions.patch: tests: Replace
+    deprecated g_main_{pending,iteration} with current
+    g_main_context_{pending,iteration}
+
+ -- Iain Lane <iain@orangesquash.org.uk>  Wed, 02 Oct 2019 10:02:52 +0100
+
+dbus-test-runner (16.10.0~bzr100+repack1-4) unstable; urgency=medium
+
+  * debian/control:
+    + Bump Standards-Version: to 4.2.1. No changes needed.
+  * debian/patches:
+    + Add 1002_new-gobject-private-api.patch. Port to newer GObject private
+      ABI. (Closes: #908275).
+  * debian/rules:
+    + Add include line for pkg-info.mk.
+
+ -- Mike Gabriel <sunweaver@debian.org>  Fri, 02 Nov 2018 22:43:17 +0100
+
+dbus-test-runner (16.10.0~bzr100+repack1-3) unstable; urgency=medium
+
+  * debian/control:
+    + Update Vcs-*: fields. Packaging Git has been migrated to salsa.debian.org.
+    + Bump Standards-Version: to 4.2.0. No changes needed.
+    + Update Section: field (gnome -> devel).
+    + Switch B-D from gnome-common to mate-common. (Closes: #829965).
+    + White-space cleanup.
+  * debian/patches:
+    + Add 1001_use-mate-common.patch. Build using mate-autogen instead of
+      gnome-autogen.sh.
+  * debian/{control,compat}:
+    + Bump to DH compat level version 11.
+  * debian/tests:
+    + Add autopkgtests (from Ubuntu).
+  * debian/copyright:
+    + Use secure URI to obtain copyright format reference
+  * debian/rules:
+    + Don't parse dpkg-parsechangelog output. Add debian/ to list of removed
+      files/folders when packing our orig tarball.
+  * debian/copyright:
+    + Add global Comment: field that explains what we repack in the orig
+      tarball.
+    + Use secure URI to obtain copyright format reference.
+  * debian/watch:
+    + Drop file. We obtain orig tarball from Bzr VCS.
+
+ -- Mike Gabriel <sunweaver@debian.org>  Tue, 14 Aug 2018 20:41:11 +0200
+
+dbus-test-runner (16.10.0~bzr100+repack1-2) unstable; urgency=medium
+
+  * debian/control: Add Vcs-*: fields.
+
+ -- Mike Gabriel <sunweaver@debian.org>  Mon, 23 Jan 2017 08:56:46 +0100
+
+dbus-test-runner (16.10.0~bzr100+repack1-1) unstable; urgency=medium
+
+  * New Bzr snapshot (trunk branch, rev 100).
+  * debian/rules:
+   + In get-orig-source, create orig tarball in ../ rather than in ./.
+
+ -- Mike Gabriel <sunweaver@debian.org>  Tue, 29 Nov 2016 17:11:48 +0100
+
+dbus-test-runner (15.10.0~bzr98+repack1-2) unstable; urgency=medium
+
+  * debian/control:
+    + Add to B-D and D (dbus-test-runner): procps. (Closes: #820662, #805389).
+    + Bump Standards: to 3.9.8. No changes needed.
+    + Versioned B-D on dpkg-dev (>= 1.16.1.1).
+  * debian/rules:
+    + Enable all hardening flags.
+    + Fix flaw in get-orig-source variable setting code.
+
+ -- Mike Gabriel <sunweaver@debian.org>  Tue, 30 Aug 2016 22:35:28 +0200
+
+dbus-test-runner (15.10.0~bzr98+repack1-1) unstable; urgency=medium
+
+  * New Bzr snapshot (trunk branch, rev 98).
+    Released in Ubuntu as 15.04.0+15.10.20151002-0ubuntu1.
+  * debian/libdbustest1.symbols:
+    + Update with two new symbols for this snapshot.
+  * debian/control:
+    + Remove XS-Testsuite: field. Not required anymore since dpkg 1.17.11.
+
+ -- Mike Gabriel <sunweaver@debian.org>  Thu, 29 Oct 2015 00:36:32 +0100
+
+dbus-test-runner (15.04.0~bzr87+repack1-2) unstable; urgency=medium
+
+  * debian/control:
+    + Soften Breaks:/Replaces: relation to previous package versions.
+      (Closes: #788855).
+
+ -- Mike Gabriel <sunweaver@debian.org>  Tue, 16 Jun 2015 10:10:19 +0200
+
+dbus-test-runner (15.04.0~bzr87+repack1-1) unstable; urgency=medium
+
+  * Initial release. (Closes: #677271)
+
+ -- Mike Gabriel <sunweaver@debian.org>  Tue, 20 Jan 2015 15:04:30 +0100

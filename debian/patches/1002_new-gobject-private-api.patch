@@ -1,0 +1,2266 @@
+Description: Port to new GObject private ABI
+Author: Mike Gabriel <mike.gabriel@das-netzwerkteam.de>
+Comment: https://www.bassi.io/articles/2013/06/21/the-king-is-dead/
+
+--- a/libdbustest/watchdog.c
++++ b/libdbustest/watchdog.c
+@@ -4,18 +4,15 @@
+ 
+ #include "watchdog.h"
+ 
+-struct _DbusTestWatchdogPrivate {
++typedef struct {
+ 	GPid watchdog;
+-};
+-
+-#define DBUS_TEST_WATCHDOG_GET_PRIVATE(o) \
+-(G_TYPE_INSTANCE_GET_PRIVATE ((o), DBUS_TEST_TYPE_WATCHDOG, DbusTestWatchdogPrivate))
++} DbusTestWatchdogPrivate;
+ 
+ static void dbus_test_watchdog_class_init (DbusTestWatchdogClass *klass);
+ static void dbus_test_watchdog_init       (DbusTestWatchdog *self);
+ static void dbus_test_watchdog_finalize   (GObject *object);
+ 
+-G_DEFINE_TYPE (DbusTestWatchdog, dbus_test_watchdog, G_TYPE_OBJECT);
++G_DEFINE_TYPE_WITH_PRIVATE (DbusTestWatchdog, dbus_test_watchdog, G_TYPE_OBJECT);
+ 
+ /* Initialize class */
+ static void
+@@ -23,8 +20,6 @@
+ {
+ 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+ 
+-	g_type_class_add_private (klass, sizeof (DbusTestWatchdogPrivate));
+-
+ 	object_class->finalize = dbus_test_watchdog_finalize;
+ 
+ 	return;
+@@ -34,9 +29,9 @@
+ static void
+ dbus_test_watchdog_init (G_GNUC_UNUSED DbusTestWatchdog *self)
+ {
+-	self->priv = DBUS_TEST_WATCHDOG_GET_PRIVATE(self);
++	DbusTestWatchdogPrivate *priv = dbus_test_watchdog_get_instance_private (self);
+ 
+-	self->priv->watchdog = 0;
++	priv->watchdog = 0;
+ 
+ 	return;
+ }
+@@ -46,9 +41,10 @@
+ dbus_test_watchdog_finalize (GObject *object)
+ {
+ 	DbusTestWatchdog * watchdog = DBUS_TEST_WATCHDOG(object);
+-	
+-	if (watchdog->priv->watchdog != 0) {
+-		kill(watchdog->priv->watchdog, SIGTERM);
++	DbusTestWatchdogPrivate *priv = dbus_test_watchdog_get_instance_private (watchdog);
++
++	if (priv->watchdog != 0) {
++		kill(priv->watchdog, SIGTERM);
+ 	}
+ 
+ 	G_OBJECT_CLASS (dbus_test_watchdog_parent_class)->finalize (object);
+@@ -67,7 +63,8 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_WATCHDOG(watchdog));
+ 	g_return_if_fail(pid != 0);
+-	g_return_if_fail(watchdog->priv->watchdog == 0);
++	DbusTestWatchdogPrivate *priv = dbus_test_watchdog_get_instance_private (watchdog);
++	g_return_if_fail(priv->watchdog == 0);
+ 
+ 	/* Setting up argument vector */
+ 	gchar * strpid = g_strdup_printf("%d", pid);
+@@ -84,14 +81,14 @@
+ 	               NULL, /* env */
+ 	               0, /* flags */
+ 	               NULL, NULL, /* Setup function */
+-	               &watchdog->priv->watchdog,
++	               &priv->watchdog,
+ 	               &error);
+ 
+ 	g_free(strpid);
+ 
+ 	if (error != NULL) {
+ 		g_warning("Unable to start watchdog");
+-		watchdog->priv->watchdog = 0;
++		priv->watchdog = 0;
+ 		g_error_free(error);
+ 		return;
+ 	}
+@@ -109,9 +106,10 @@
+ dbus_test_watchdog_ping (DbusTestWatchdog * watchdog)
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_WATCHDOG(watchdog));
++	DbusTestWatchdogPrivate *priv = dbus_test_watchdog_get_instance_private (watchdog);
+ 
+-	if (watchdog->priv->watchdog != 0) {
+-		kill(watchdog->priv->watchdog, SIGHUP);
++	if (priv->watchdog != 0) {
++		kill(priv->watchdog, SIGHUP);
+ 	}
+ 
+ 	return;
+--- a/libdbustest/watchdog.h
++++ b/libdbustest/watchdog.h
+@@ -15,7 +15,6 @@
+ 
+ typedef struct _DbusTestWatchdog         DbusTestWatchdog;
+ typedef struct _DbusTestWatchdogClass    DbusTestWatchdogClass;
+-typedef struct _DbusTestWatchdogPrivate  DbusTestWatchdogPrivate;
+ 
+ struct _DbusTestWatchdogClass {
+ 	GObjectClass parent_class;
+@@ -23,7 +22,6 @@
+ 
+ struct _DbusTestWatchdog {
+ 	GObject parent;
+-	DbusTestWatchdogPrivate * priv;
+ };
+ 
+ GType dbus_test_watchdog_get_type        (void);
+--- a/libdbustest/bustle.c
++++ b/libdbustest/bustle.c
+@@ -25,7 +25,7 @@
+ #include "glib-compat.h"
+ #include "dbus-test.h"
+ 
+-struct _DbusTestBustlePrivate {
++typedef struct {
+ 	gchar * filename;
+ 	gchar * executable;
+ 
+@@ -35,10 +35,7 @@
+ 	GPid pid;
+ 
+ 	gboolean crashed;
+-};
+-
+-#define DBUS_TEST_BUSTLE_GET_PRIVATE(o) \
+-(G_TYPE_INSTANCE_GET_PRIVATE ((o), DBUS_TEST_TYPE_BUSTLE, DbusTestBustlePrivate))
++} DbusTestBustlePrivate;
+ 
+ static void dbus_test_bustle_class_init (DbusTestBustleClass *klass);
+ static void dbus_test_bustle_init       (DbusTestBustle *self);
+@@ -51,15 +48,13 @@
+                                          GIOCondition          condition,
+                                          gpointer              data);
+ 
+-G_DEFINE_TYPE (DbusTestBustle, dbus_test_bustle, DBUS_TEST_TYPE_TASK);
++G_DEFINE_TYPE_WITH_PRIVATE (DbusTestBustle, dbus_test_bustle, DBUS_TEST_TYPE_TASK);
+ 
+ static void
+ dbus_test_bustle_class_init (DbusTestBustleClass *klass)
+ {
+ 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+ 
+-	g_type_class_add_private (klass, sizeof (DbusTestBustlePrivate));
+-
+ 	object_class->dispose = dbus_test_bustle_dispose;
+ 	object_class->finalize = dbus_test_bustle_finalize;
+ 
+@@ -77,17 +72,17 @@
+ {
+ 	gchar * current_dir = g_get_current_dir();
+ 
+-	self->priv = DBUS_TEST_BUSTLE_GET_PRIVATE(self);
++	DbusTestBustlePrivate *priv = dbus_test_bustle_get_instance_private(self);
+ 
+-	self->priv->filename = g_strconcat(current_dir, G_DIR_SEPARATOR_S, "bustle.log", NULL);
+-	self->priv->executable = g_strdup(BUSTLE_DUAL_MONITOR);
++	priv->filename = g_strconcat(current_dir, G_DIR_SEPARATOR_S, "bustle.log", NULL);
++	priv->executable = g_strdup(BUSTLE_DUAL_MONITOR);
+ 
+-	self->priv->watch = 0;
+-	self->priv->stderr = NULL;
+-	self->priv->file = NULL;
+-	self->priv->pid = 0;
++	priv->watch = 0;
++	priv->stderr = NULL;
++	priv->file = NULL;
++	priv->pid = 0;
+ 
+-	self->priv->crashed = FALSE;
++	priv->crashed = FALSE;
+ 
+ 	g_free (current_dir);
+ 	return;
+@@ -98,31 +93,32 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_BUSTLE(object));
+ 	DbusTestBustle * bustler = DBUS_TEST_BUSTLE(object);
++	DbusTestBustlePrivate *priv = dbus_test_bustle_get_instance_private(bustler);
+ 
+-	if (bustler->priv->watch != 0) {
+-		g_source_remove(bustler->priv->watch);
+-		bustler->priv->watch = 0;
++	if (priv->watch != 0) {
++		g_source_remove(priv->watch);
++		priv->watch = 0;
+ 	}
+ 
+-	if (bustler->priv->pid != 0) {
+-		gchar * command = g_strdup_printf("kill -INT %d", bustler->priv->pid);
++	if (priv->pid != 0) {
++		gchar * command = g_strdup_printf("kill -INT %d", priv->pid);
+ 		g_spawn_command_line_sync(command, NULL, NULL, NULL, NULL);
+ 		g_free(command);
+ 
+-		g_spawn_close_pid(bustler->priv->pid);
++		g_spawn_close_pid(priv->pid);
+ 	}
+ 
+-	if (bustler->priv->stderr != NULL) {
+-		while (G_IO_IN & g_io_channel_get_buffer_condition(bustler->priv->stderr)) {
+-			bustle_write_error(bustler->priv->stderr, 0 /* unused */, bustler);
++	if (priv->stderr != NULL) {
++		while (G_IO_IN & g_io_channel_get_buffer_condition(priv->stderr)) {
++			bustle_write_error(priv->stderr, 0 /* unused */, bustler);
+ 		}
+ 
+-		g_clear_pointer(&bustler->priv->stderr, g_io_channel_unref);
++		g_clear_pointer(&priv->stderr, g_io_channel_unref);
+ 	}
+ 
+-	if (bustler->priv->file != NULL) {
+-		g_io_channel_shutdown(bustler->priv->file, TRUE, NULL);
+-		g_clear_pointer(&bustler->priv->file, g_io_channel_unref);
++	if (priv->file != NULL) {
++		g_io_channel_shutdown(priv->file, TRUE, NULL);
++		g_clear_pointer(&priv->file, g_io_channel_unref);
+ 	}
+ 
+ 	G_OBJECT_CLASS (dbus_test_bustle_parent_class)->dispose (object);
+@@ -134,9 +130,10 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_BUSTLE(object));
+ 	DbusTestBustle * bustler = DBUS_TEST_BUSTLE(object);
++	DbusTestBustlePrivate *priv = dbus_test_bustle_get_instance_private(bustler);
+ 
+-	g_free(bustler->priv->filename);
+-	g_free(bustler->priv->executable);
++	g_free(priv->filename);
++	g_free(priv->executable);
+ 
+ 	G_OBJECT_CLASS (dbus_test_bustle_parent_class)->finalize (object);
+ 	return;
+@@ -149,9 +146,10 @@
+ 
+ 	DbusTestBustle * bustler = g_object_new(DBUS_TEST_TYPE_BUSTLE,
+ 	                                        NULL);
++	DbusTestBustlePrivate *priv = dbus_test_bustle_get_instance_private(bustler);
+ 
+-	g_free(bustler->priv->filename);
+-	bustler->priv->filename = g_strdup(filename);
++	g_free(priv->filename);
++	priv->filename = g_strdup(filename);
+ 
+ 	dbus_test_task_set_name(DBUS_TEST_TASK(bustler), "Bustle");
+ 
+@@ -164,8 +162,9 @@
+ 	g_return_if_fail(DBUS_TEST_IS_BUSTLE(bustle));
+ 	g_return_if_fail(executable != NULL);
+ 
+-	g_free(bustle->priv->executable);
+-	bustle->priv->executable = g_strdup(executable);
++	DbusTestBustlePrivate *priv = dbus_test_bustle_get_instance_private(bustle);
++	g_free(priv->executable);
++	priv->executable = g_strdup(executable);
+ 
+ 	return;
+ }
+@@ -175,13 +174,14 @@
+ {
+ 	g_critical("Bustle Monitor exited abruptly!");
+ 	DbusTestBustle * bustler = DBUS_TEST_BUSTLE(data);
++	DbusTestBustlePrivate *priv = dbus_test_bustle_get_instance_private(bustler);
+ 
+-	if (bustler->priv->pid != 0) {
++	if (priv->pid != 0) {
+ 		g_spawn_close_pid(pid);
+-		bustler->priv->pid = 0;
++		priv->pid = 0;
+ 	}
+ 
+-	bustler->priv->crashed = TRUE;
++	priv->crashed = TRUE;
+ 	g_signal_emit_by_name(G_OBJECT(bustler), DBUS_TEST_TASK_SIGNAL_STATE_CHANGED, DBUS_TEST_TASK_STATE_FINISHED, NULL);
+ 
+ 	return;
+@@ -218,20 +218,21 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_BUSTLE(task));
+ 	DbusTestBustle * bustler = DBUS_TEST_BUSTLE(task);
++	DbusTestBustlePrivate *priv = dbus_test_bustle_get_instance_private(bustler);
+ 
+-	if (bustler->priv->pid != 0) {
++	if (priv->pid != 0) {
+ 		return;
+ 	}
+ 	
+ 	GError * error = NULL;
+ 
+-	bustler->priv->file = g_io_channel_new_file(bustler->priv->filename, "w", &error);
++	priv->file = g_io_channel_new_file(priv->filename, "w", &error);
+ 
+ 	if (error != NULL) {
+-		g_critical("Unable to open bustle file '%s': %s", bustler->priv->filename, error->message);
++		g_critical("Unable to open bustle file '%s': %s", priv->filename, error->message);
+ 		g_error_free(error);
+ 
+-		bustler->priv->crashed = TRUE;
++		priv->crashed = TRUE;
+ 		g_signal_emit_by_name(G_OBJECT(bustler), DBUS_TEST_TASK_SIGNAL_STATE_CHANGED, DBUS_TEST_TASK_STATE_FINISHED, NULL);
+ 		return;
+ 	}
+@@ -241,8 +242,8 @@
+ 	gchar * current_dir = g_get_current_dir();
+ 	
+ 	gchar ** bustle_monitor = g_new0(gchar *, 3);
+-	bustle_monitor[0] = (gchar *)bustler->priv->executable;
+-	bustle_monitor[1] = (gchar *)bustler->priv->filename;
++	bustle_monitor[0] = (gchar *)priv->executable;
++	bustle_monitor[1] = (gchar *)priv->filename;
+ 
+ 	g_spawn_async_with_pipes(current_dir,
+ 	                         bustle_monitor, /* argv */
+@@ -251,7 +252,7 @@
+ 	                         G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, /* flags */
+ 	                         NULL, /* child setup func */
+ 	                         NULL, /* child setup data */
+-	                         &bustler->priv->pid, /* PID */
++	                         &priv->pid, /* PID */
+ 	                         NULL, /* stdin */
+ 	                         NULL, /* stdout */
+ 	                         &bustle_stderr_num, /* stderr */
+@@ -264,21 +265,21 @@
+ 		g_critical("Unable to start bustling data: %s", error->message);
+ 		g_error_free(error);
+ 
+-		bustler->priv->pid = 0; /* ensure this */
+-		bustler->priv->crashed = TRUE;
++		priv->pid = 0; /* ensure this */
++		priv->crashed = TRUE;
+ 		g_signal_emit_by_name(G_OBJECT(bustler), DBUS_TEST_TASK_SIGNAL_STATE_CHANGED, DBUS_TEST_TASK_STATE_FINISHED, NULL);
+ 		return;
+ 	}
+ 
+ 	if (TRUE) {
+-		gchar * start = g_strdup_printf("Starting bustle monitor.  PID: %d", bustler->priv->pid);
++		gchar * start = g_strdup_printf("Starting bustle monitor.  PID: %d", priv->pid);
+ 		dbus_test_task_print(DBUS_TEST_TASK(bustler), start);
+ 		g_free(start);
+ 	}
+-	bustler->priv->watch = g_child_watch_add(bustler->priv->pid, bustle_watcher, bustler);
++	priv->watch = g_child_watch_add(priv->pid, bustle_watcher, bustler);
+ 
+-	bustler->priv->stderr = g_io_channel_unix_new(bustle_stderr_num);
+-	g_io_add_watch(bustler->priv->stderr,
++	priv->stderr = g_io_channel_unix_new(bustle_stderr_num);
++	g_io_add_watch(priv->stderr,
+ 	               G_IO_IN | G_IO_HUP | G_IO_ERR, /* conditions */
+ 	               bustle_write_error, /* func */
+ 	               bustler); /* func data */
+@@ -299,11 +300,11 @@
+ {
+ 	g_return_val_if_fail(DBUS_TEST_IS_BUSTLE(task), FALSE);
+ 	DbusTestBustle * bustler = DBUS_TEST_BUSTLE(task);
++	DbusTestBustlePrivate *priv = dbus_test_bustle_get_instance_private(bustler);
+ 
+-	if (bustler->priv->crashed) {
++	if (priv->crashed) {
+ 		return FALSE;
+ 	} else {
+ 		return TRUE;
+ 	}
+ }
+-
+--- a/libdbustest/bustle.h
++++ b/libdbustest/bustle.h
+@@ -34,7 +34,6 @@
+ 
+ typedef struct _DbusTestBustle        DbusTestBustle;
+ typedef struct _DbusTestBustleClass   DbusTestBustleClass;
+-typedef struct _DbusTestBustlePrivate DbusTestBustlePrivate;
+ 
+ struct _DbusTestBustleClass {
+ 	DbusTestTaskClass parent_class;
+@@ -42,7 +41,6 @@
+ 
+ struct _DbusTestBustle {
+ 	DbusTestTask parent;
+-	DbusTestBustlePrivate * priv;
+ };
+ 
+ GType dbus_test_bustle_get_type (void);
+--- a/libdbustest/dbus-mock.c
++++ b/libdbustest/dbus-mock.c
+@@ -28,7 +28,7 @@
+ typedef struct _MockObjectProperty MockObjectProperty;
+ typedef struct _MockObjectMethod MockObjectMethod;
+ 
+-struct _DbusTestDbusMockPrivate {
++typedef struct {
+ 	gchar * name;
+ 	_DbusMockIfaceOrgFreedesktopDBusMock * proxy;
+ 	/* Entries of DbusTestDbusMockObject */
+@@ -36,7 +36,7 @@
+ 	GHashTable * object_proxies;
+ 	GDBusConnection * bus;
+ 	GCancellable * cancel;
+-};
++} DbusTestDbusMockPrivate;
+ 
+ /* Represents every object on the bus that we're mocking */
+ struct _DbusTestDbusMockObject {
+@@ -75,9 +75,6 @@
+ 
+ static guint mock_cnt = 0;
+ 
+-#define DBUS_TEST_DBUS_MOCK_GET_PRIVATE(o) \
+-(G_TYPE_INSTANCE_GET_PRIVATE ((o), DBUS_TEST_TYPE_DBUS_MOCK, DbusTestDbusMockPrivate))
+-
+ static void dbus_test_dbus_mock_class_init (DbusTestDbusMockClass *klass);
+ static void dbus_test_dbus_mock_init       (DbusTestDbusMock *self);
+ static void constructed                    (GObject * object);
+@@ -96,7 +93,7 @@
+ static void method_free                    (gpointer data);
+ static void property_free                  (gpointer data);
+ 
+-G_DEFINE_TYPE (DbusTestDbusMock, dbus_test_dbus_mock, DBUS_TEST_TYPE_PROCESS);
++G_DEFINE_TYPE_WITH_PRIVATE (DbusTestDbusMock, dbus_test_dbus_mock, DBUS_TEST_TYPE_PROCESS);
+ G_DEFINE_QUARK("dbus-test-dbus-mock", _dbus_mock);
+ 
+ /* Initialize Class */
+@@ -105,8 +102,6 @@
+ {
+ 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+ 
+-	g_type_class_add_private (klass, sizeof (DbusTestDbusMockPrivate));
+-
+ 	object_class->dispose = dbus_test_dbus_mock_dispose;
+ 	object_class->finalize = dbus_test_dbus_mock_finalize;
+ 	object_class->get_property = get_property;
+@@ -131,12 +126,12 @@
+ static void
+ dbus_test_dbus_mock_init (DbusTestDbusMock *self)
+ {
+-	self->priv = DBUS_TEST_DBUS_MOCK_GET_PRIVATE(self);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(self);
+ 
+-	self->priv->objects = NULL;
+-	self->priv->object_proxies = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_object_unref);
++	priv->objects = NULL;
++	priv->object_proxies = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_object_unref);
+ 
+-	self->priv->cancel = g_cancellable_new();
++	priv->cancel = g_cancellable_new();
+ 
+ 	return;
+ }
+@@ -162,18 +157,19 @@
+ dbus_test_dbus_mock_dispose (GObject *object)
+ {
+ 	DbusTestDbusMock * self = DBUS_TEST_DBUS_MOCK(object);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(self);
+ 
+-	if (self->priv->cancel != NULL)
+-		g_cancellable_cancel(self->priv->cancel);
+-	g_clear_object(&self->priv->cancel);
++	if (priv->cancel != NULL)
++		g_cancellable_cancel(priv->cancel);
++	g_clear_object(&priv->cancel);
+ 
+-	g_hash_table_remove_all(self->priv->object_proxies);
++	g_hash_table_remove_all(priv->object_proxies);
+ 
+-	g_list_free_full(self->priv->objects, object_free);
+-	self->priv->objects = NULL;
++	g_list_free_full(priv->objects, object_free);
++	priv->objects = NULL;
+ 
+-	g_clear_object(&self->priv->proxy);
+-	g_clear_object(&self->priv->bus);
++	g_clear_object(&priv->proxy);
++	g_clear_object(&priv->bus);
+ 
+ 	G_OBJECT_CLASS (dbus_test_dbus_mock_parent_class)->dispose (object);
+ 	return;
+@@ -184,9 +180,10 @@
+ dbus_test_dbus_mock_finalize (GObject *object)
+ {
+ 	DbusTestDbusMock * self = DBUS_TEST_DBUS_MOCK(object);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(self);
+ 
+-	g_free(self->priv->name);
+-	g_hash_table_destroy(self->priv->object_proxies);
++	g_free(priv->name);
++	g_hash_table_destroy(priv->object_proxies);
+ 
+ 	G_OBJECT_CLASS (dbus_test_dbus_mock_parent_class)->finalize (object);
+ 	return;
+@@ -197,10 +194,11 @@
+ get_property (GObject * object, guint property_id, GValue * value, GParamSpec * pspec)
+ {
+ 	DbusTestDbusMock * self = DBUS_TEST_DBUS_MOCK(object);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(self);
+ 
+ 	switch (property_id) {
+ 	case PROP_DBUS_NAME:
+-		g_value_set_string(value, self->priv->name);
++		g_value_set_string(value, priv->name);
+ 		break;
+ 	default:
+ 		G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+@@ -214,11 +212,12 @@
+ set_property (GObject * object, guint property_id, const GValue * value, GParamSpec * pspec)
+ {
+ 	DbusTestDbusMock * self = DBUS_TEST_DBUS_MOCK(object);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(self);
+ 
+ 	switch (property_id) {
+ 	case PROP_DBUS_NAME:
+-		g_free(self->priv->name);
+-		self->priv->name = g_value_dup_string(value);
++		g_free(priv->name);
++		priv->name = g_value_dup_string(value);
+ 		break;
+ 	default:
+ 		G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+@@ -300,7 +299,9 @@
+ 	GVariant * properties = NULL;
+ 	GVariant * methods = NULL;
+ 
+-	g_return_val_if_fail(mock->priv->proxy != NULL, FALSE);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(mock);
++
++	g_return_val_if_fail(priv->proxy != NULL, FALSE);
+ 
+ 	if (object->properties->len > 0) {
+ 		GVariantBuilder property_builder;
+@@ -335,29 +336,29 @@
+ 	}
+ 
+ 
+-	_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(mock->priv->object_proxies, object->object_path);
++	_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(priv->object_proxies, object->object_path);
+ 
+ 	if (proxy == NULL) {
+ 		g_debug("Add object (%s) on '%s'", object->interface, object->object_path);
+ 		gboolean add_object = _dbus_mock_iface_org_freedesktop_dbus_mock_call_add_object_sync(
+-			mock->priv->proxy,
++			priv->proxy,
+ 			object->object_path,
+ 			object->interface,
+ 			properties,
+ 			methods,
+-			mock->priv->cancel,
++			priv->cancel,
+ 			error);
+ 
+ 		if (add_object) {
+-			proxy = _dbus_mock_iface_org_freedesktop_dbus_mock_proxy_new_sync(mock->priv->bus,
++			proxy = _dbus_mock_iface_org_freedesktop_dbus_mock_proxy_new_sync(priv->bus,
+ 				G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES | G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
+-				mock->priv->name,
++				priv->name,
+ 				object->object_path, /* path */
+-				mock->priv->cancel,
++				priv->cancel,
+ 				error
+ 			);
+ 
+-			g_hash_table_insert(mock->priv->object_proxies, g_strdup(object->object_path), proxy);
++			g_hash_table_insert(priv->object_proxies, g_strdup(object->object_path), proxy);
+ 		}
+ 	} else {
+ 		gboolean methods_sent = FALSE;
+@@ -442,7 +443,9 @@
+ 		paramval = "--system"; g_array_append_val(params, paramval);
+ 	}
+ 
+-	g_array_append_val(params, self->priv->name);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(self);
++
++	g_array_append_val(params, priv->name);
+ 	paramval = "/"; g_array_append_val(params, paramval);
+ 	paramval = "com.canonical.DbusTest.DbusMock"; g_array_append_val(params, paramval);
+ 
+@@ -456,12 +459,13 @@
+ {
+ 	GError * error = NULL;
+ 	DbusTestDbusMock * self = DBUS_TEST_DBUS_MOCK(task);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(self);
+ 
+ 	/* Grab the new bus */
+ 	if (dbus_test_task_get_bus(DBUS_TEST_TASK(self)) == DBUS_TEST_SERVICE_BUS_SYSTEM) {
+-		self->priv->bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
++		priv->bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
+ 	} else {
+-		self->priv->bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
++		priv->bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+ 	}
+ 
+ 	if (error != NULL) {
+@@ -477,11 +481,11 @@
+ 	/**** Initialize the DBus Mock instance ****/
+ 
+ 	/* Zero, Setup the proxy */
+-	self->priv->proxy = _dbus_mock_iface_org_freedesktop_dbus_mock_proxy_new_sync(self->priv->bus,
++	priv->proxy = _dbus_mock_iface_org_freedesktop_dbus_mock_proxy_new_sync(priv->bus,
+ 		G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES | G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
+-		self->priv->name,
++		priv->name,
+ 		"/", /* path */
+-		self->priv->cancel,
++		priv->cancel,
+ 		&error
+ 	);
+ 
+@@ -492,21 +496,21 @@
+ 	}
+ 
+ 	/* First, Ensure we have a proxy */
+-	gchar * owner = g_dbus_proxy_get_name_owner(G_DBUS_PROXY(self->priv->proxy));
++	gchar * owner = g_dbus_proxy_get_name_owner(G_DBUS_PROXY(priv->proxy));
+ 	if (owner == NULL) {
+ 		g_debug("Waiting on name from DBusMock");
+ 		GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
+ 
+ 		guint timeout_sig = g_timeout_add_seconds(3, mock_start_check, mainloop);
+-		gulong owner_sig = g_signal_connect(G_OBJECT(self->priv->proxy), "notify::g-name-owner", G_CALLBACK(got_name_owner), mainloop);
++		gulong owner_sig = g_signal_connect(G_OBJECT(priv->proxy), "notify::g-name-owner", G_CALLBACK(got_name_owner), mainloop);
+ 
+ 		g_main_loop_run(mainloop);
+ 		g_main_loop_unref(mainloop);
+ 
+-		g_signal_handler_disconnect(self->priv->proxy, owner_sig);
++		g_signal_handler_disconnect(priv->proxy, owner_sig);
+ 		g_source_remove(timeout_sig);
+ 
+-		owner = g_dbus_proxy_get_name_owner(G_DBUS_PROXY(self->priv->proxy));
++		owner = g_dbus_proxy_get_name_owner(G_DBUS_PROXY(priv->proxy));
+ 		if (owner == NULL) {
+ 			g_critical("Unable to get DBusMock started within 3 seconds");
+ 			return;
+@@ -515,8 +519,8 @@
+ 	g_free(owner);
+ 
+ 	/* Second, Install Objects */
+-	GList * lobj = self->priv->objects;
+-	for (lobj = self->priv->objects; lobj != NULL; lobj = g_list_next(lobj)) {
++	GList * lobj = priv->objects;
++	for (lobj = priv->objects; lobj != NULL; lobj = g_list_next(lobj)) {
+ 		GError * error = NULL;
+ 
+ 		DbusTestDbusMockObject * obj = (DbusTestDbusMockObject *)lobj->data;
+@@ -574,9 +578,11 @@
+ 	g_return_val_if_fail(path != NULL, NULL);
+ 	g_return_val_if_fail(interface != NULL, NULL);
+ 
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(mock);
++
+ 	/* Check to see if we have that one */
+-	GList * lobj = mock->priv->objects;
+-	for (lobj = mock->priv->objects; lobj != NULL; lobj = g_list_next(lobj)) {
++	GList * lobj = priv->objects;
++	for (lobj = priv->objects; lobj != NULL; lobj = g_list_next(lobj)) {
+ 		DbusTestDbusMockObject * obj = (DbusTestDbusMockObject *)lobj->data;
+ 
+ 		if (g_strcmp0(path, obj->object_path) == 0 &&
+@@ -595,7 +601,7 @@
+ 	newobj->methods = g_array_new(FALSE, TRUE, sizeof(MockObjectMethod));
+ 	g_array_set_clear_func(newobj->methods, method_free);
+ 
+-	mock->priv->objects = g_list_prepend(mock->priv->objects, newobj);
++	priv->objects = g_list_prepend(priv->objects, newobj);
+ 
+ 	g_debug("Creating object: %s (%s)", newobj->object_path, newobj->interface);
+ 
+@@ -699,7 +705,9 @@
+ 	g_variant_ref_sink(in);
+ 	g_variant_ref_sink(out);
+ 
+-	_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(mock->priv->object_proxies, obj->object_path);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(mock);
++
++	_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(priv->object_proxies, obj->object_path);
+ 	g_return_val_if_fail(proxy != NULL, FALSE); /* Should never happen */
+ 
+ 	gboolean ret = _dbus_mock_iface_org_freedesktop_dbus_mock_call_add_method_sync(
+@@ -709,7 +717,7 @@
+ 		g_variant_get_string(in, NULL),
+ 		g_variant_get_string(out, NULL),
+ 		python_code,
+-		mock->priv->cancel,
++		priv->cancel,
+ 		error
+ 	);
+ 
+@@ -796,12 +804,14 @@
+ 		return FALSE;
+ 	}
+ 
+-	_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(mock->priv->object_proxies, obj->object_path);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(mock);
++
++	_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(priv->object_proxies, obj->object_path);
+ 	g_return_val_if_fail(proxy != NULL, FALSE); /* Should never happen */
+ 
+ 	return _dbus_mock_iface_org_freedesktop_dbus_mock_call_clear_calls_sync(
+ 		proxy,
+-		mock->priv->cancel,
++		priv->cancel,
+ 		error
+ 	);
+ }
+@@ -859,7 +869,9 @@
+ 		return NULL;
+ 	}
+ 
+-	_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(mock->priv->object_proxies, obj->object_path);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(mock);
++
++	_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(priv->object_proxies, obj->object_path);
+ 	g_return_val_if_fail(proxy != NULL, FALSE); /* Should never happen */
+ 
+ 	/* Find our method */
+@@ -876,7 +888,7 @@
+ 	_dbus_mock_iface_org_freedesktop_dbus_mock_call_get_calls_sync(
+ 		proxy,
+ 		&call_list,
+-		mock->priv->cancel,
++		priv->cancel,
+ 		error);
+ 
+ 	if (call_list == NULL) {
+@@ -968,7 +980,9 @@
+ 		return TRUE;
+ 	}
+ 
+-	_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(mock->priv->object_proxies, obj->object_path);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(mock);
++
++	_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(priv->object_proxies, obj->object_path);
+ 	g_return_val_if_fail(proxy != NULL, FALSE); /* Should never happen */
+ 
+ 	GVariantBuilder builder;
+@@ -984,7 +998,7 @@
+ 		proxy,
+ 		obj->interface,
+ 		g_variant_builder_end(&builder),
+-		mock->priv->cancel,
++		priv->cancel,
+ 		error
+ 	);
+ }
+@@ -1036,11 +1050,13 @@
+ 		return FALSE;
+ 	}
+ 
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(mock);
++
+ 	/* Send the update to Dbusmock */
+ 	if (is_running(mock)) {
+ 		GError * local_error = NULL;
+-		g_dbus_connection_call_sync(mock->priv->bus,
+-			mock->priv->name,
++		g_dbus_connection_call_sync(priv->bus,
++			priv->name,
+ 			obj->object_path,
+ 			"org.freedesktop.DBus.Properties",
+ 			"Set",
+@@ -1051,7 +1067,7 @@
+ 			NULL, /* return */
+ 			G_DBUS_CALL_FLAGS_NO_AUTO_START,
+ 			-1, /* timeout */
+-			mock->priv->cancel,
++			priv->cancel,
+ 			&local_error);
+ 
+ 		if (local_error != NULL) {
+@@ -1061,7 +1077,7 @@
+ 			return FALSE;
+ 		}
+ 
+-		_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(mock->priv->object_proxies, obj->object_path);
++		_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(priv->object_proxies, obj->object_path);
+ 		if (proxy != NULL) {
+ 			GVariantBuilder changed_builder;
+ 			g_variant_builder_init(&changed_builder, G_VARIANT_TYPE_ARRAY);
+@@ -1090,7 +1106,7 @@
+ 			                                                                 "PropertiesChanged",
+ 			                                                                 "sa{sv}as",
+ 			                                                                 g_variant_builder_end(&changed_builder),
+-			                                                                 mock->priv->cancel,
++			                                                                 priv->cancel,
+ 			                                                                 &local_error);
+ 
+ 			if (local_error != NULL) {
+@@ -1175,7 +1191,9 @@
+ 		return FALSE;
+ 	}
+ 
+-	_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(mock->priv->object_proxies, obj->object_path);
++	DbusTestDbusMockPrivate *priv = dbus_test_dbus_mock_get_instance_private(mock);
++
++	_DbusMockIfaceOrgFreedesktopDBusMock * proxy = g_hash_table_lookup(priv->object_proxies, obj->object_path);
+ 	g_return_val_if_fail(proxy != NULL, FALSE); /* Should never happen */
+ 
+ 	/* floating ref swallowed by call_emit_signal() */
+@@ -1190,7 +1208,7 @@
+ 		name,
+ 		g_variant_get_string(sig_types, NULL),
+ 		sig_params,
+-		mock->priv->cancel,
++		priv->cancel,
+ 		error
+ 	);
+ 
+--- a/libdbustest/dbus-mock.h
++++ b/libdbustest/dbus-mock.h
+@@ -38,7 +38,6 @@
+ 
+ typedef struct _DbusTestDbusMock         DbusTestDbusMock;
+ typedef struct _DbusTestDbusMockClass    DbusTestDbusMockClass;
+-typedef struct _DbusTestDbusMockPrivate  DbusTestDbusMockPrivate;
+ typedef struct _DbusTestDbusMockObject   DbusTestDbusMockObject;
+ typedef struct _DbusTestDbusMockCall     DbusTestDbusMockCall;
+ 
+@@ -48,7 +47,6 @@
+ 
+ struct _DbusTestDbusMock {
+ 	DbusTestProcess parent;
+-	DbusTestDbusMockPrivate * priv;
+ };
+ 
+ struct _DbusTestDbusMockCall {
+--- a/libdbustest/process.c
++++ b/libdbustest/process.c
+@@ -25,7 +25,7 @@
+ 
+ #include "glib-compat.h"
+ 
+-struct _DbusTestProcessPrivate {
++typedef struct {
+ 	gchar * executable;
+ 	GArray * parameters;
+ 
+@@ -36,7 +36,7 @@
+ 
+ 	gboolean complete;
+ 	gint status;
+-};
++} DbusTestProcessPrivate;
+ 
+ enum {
+ 	PROP_0,
+@@ -45,9 +45,6 @@
+ 	NUM_PROPS
+ };
+ 
+-#define DBUS_TEST_PROCESS_GET_PRIVATE(o) \
+-(G_TYPE_INSTANCE_GET_PRIVATE ((o), DBUS_TEST_TYPE_PROCESS, DbusTestProcessPrivate))
+-
+ static void dbus_test_process_class_init (DbusTestProcessClass *klass);
+ static void dbus_test_process_init       (DbusTestProcess *self);
+ static void dbus_test_process_dispose    (GObject *object);
+@@ -64,15 +61,13 @@
+                                           const GValue * value,
+                                           GParamSpec * pspec);
+ 
+-G_DEFINE_TYPE (DbusTestProcess, dbus_test_process, DBUS_TEST_TYPE_TASK);
++G_DEFINE_TYPE_WITH_PRIVATE (DbusTestProcess, dbus_test_process, DBUS_TEST_TYPE_TASK);
+ 
+ static void
+ dbus_test_process_class_init (DbusTestProcessClass *klass)
+ {
+ 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+ 
+-	g_type_class_add_private (klass, sizeof (DbusTestProcessPrivate));
+-
+ 	object_class->dispose = dbus_test_process_dispose;
+ 	object_class->finalize = dbus_test_process_finalize;
+ 	object_class->get_property = get_property;
+@@ -112,16 +107,16 @@
+ static void
+ dbus_test_process_init (DbusTestProcess *self)
+ {
+-	self->priv = DBUS_TEST_PROCESS_GET_PRIVATE(self);
++	DbusTestProcessPrivate *priv = dbus_test_process_get_instance_private(self);
+ 
+-	self->priv->executable = NULL;
++	priv->executable = NULL;
+ 
+-	self->priv->parameters = g_array_new(TRUE /* zero terminated */,
+-	                                     TRUE /* clear */,
+-	                                     sizeof(gchar *));
+-	g_array_set_clear_func(self->priv->parameters, array_free_helper);
++	priv->parameters = g_array_new(TRUE /* zero terminated */,
++	                               TRUE /* clear */,
++	                               sizeof(gchar *));
++	g_array_set_clear_func(priv->parameters, array_free_helper);
+ 
+-	self->priv->io_chan = NULL;
++	priv->io_chan = NULL;
+ 
+ 	return;
+ }
+@@ -131,34 +126,35 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_PROCESS(object));
+ 	DbusTestProcess * process = DBUS_TEST_PROCESS(object);
++	DbusTestProcessPrivate *priv = dbus_test_process_get_instance_private(process);
+ 
+-	if (process->priv->io_watch != 0) {
+-		g_source_remove(process->priv->io_watch);
+-		process->priv->io_watch = 0;
++	if (priv->io_watch != 0) {
++		g_source_remove(priv->io_watch);
++		priv->io_watch = 0;
+ 	}
+ 
+-	if (process->priv->watcher != 0) {
+-		g_source_remove(process->priv->watcher);
+-		process->priv->watcher = 0;
++	if (priv->watcher != 0) {
++		g_source_remove(priv->watcher);
++		priv->watcher = 0;
+ 	}
+ 
+-	if (process->priv->pid != 0) {
+-		gchar * killstr = g_strdup_printf("kill -9 %d", process->priv->pid);
++	if (priv->pid != 0) {
++		gchar * killstr = g_strdup_printf("kill -9 %d", priv->pid);
+ 		g_spawn_command_line_async(killstr, NULL);
+ 		g_free(killstr);
+ 
+-		g_spawn_close_pid(process->priv->pid);
+-		process->priv->pid = 0;
++		g_spawn_close_pid(priv->pid);
++		priv->pid = 0;
+ 	}
+ 
+-	if (process->priv->io_chan != NULL) {
++	if (priv->io_chan != NULL) {
+ 		GIOStatus status = G_IO_STATUS_NORMAL;
+ 
+-		while ((G_IO_IN & g_io_channel_get_buffer_condition(process->priv->io_chan)) && status == G_IO_STATUS_NORMAL) {
++		while ((G_IO_IN & g_io_channel_get_buffer_condition(priv->io_chan)) && status == G_IO_STATUS_NORMAL) {
+ 			gchar * line = NULL;
+ 			gsize termloc;
+ 
+-			status = g_io_channel_read_line (process->priv->io_chan, &line, NULL, &termloc, NULL);
++			status = g_io_channel_read_line (priv->io_chan, &line, NULL, &termloc, NULL);
+ 
+ 			if (status != G_IO_STATUS_NORMAL) {
+ 				continue;
+@@ -169,7 +165,7 @@
+ 			g_free(line);
+ 		}
+ 
+-		g_clear_pointer(&process->priv->io_chan, g_io_channel_unref);
++		g_clear_pointer(&priv->io_chan, g_io_channel_unref);
+ 	}
+ 
+ 	G_OBJECT_CLASS (dbus_test_process_parent_class)->dispose (object);
+@@ -181,12 +177,13 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_PROCESS(object));
+ 	DbusTestProcess * process = DBUS_TEST_PROCESS(object);
++	DbusTestProcessPrivate *priv = dbus_test_process_get_instance_private(process);
+ 
+-	g_free(process->priv->executable);
+-	process->priv->executable = NULL;
++	g_free(priv->executable);
++	priv->executable = NULL;
+ 
+-	g_array_free(process->priv->parameters, TRUE /* free segment */);
+-	process->priv->parameters = NULL;
++	g_array_free(priv->parameters, TRUE /* free segment */);
++	priv->parameters = NULL;
+ 
+ 	G_OBJECT_CLASS (dbus_test_process_parent_class)->finalize (object);
+ 	return;
+@@ -197,13 +194,14 @@
+ get_property (GObject * object, guint property_id, G_GNUC_UNUSED GValue * value, GParamSpec * pspec)
+ {
+ 	DbusTestProcess * self = DBUS_TEST_PROCESS(object);
++	DbusTestProcessPrivate *priv = dbus_test_process_get_instance_private(self);
+ 
+ 	switch (property_id) {
+ 	case PROP_EXECUTABLE:
+-		g_value_set_string(value, self->priv->executable);
++		g_value_set_string(value, priv->executable);
+ 		break;
+ 	case PROP_PARAMETERS:
+-		g_value_set_boxed(value, self->priv->parameters);
++		g_value_set_boxed(value, priv->parameters);
+ 		break;
+ 	default:
+ 		G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+@@ -222,15 +220,16 @@
+ 	}
+ 
+ 	DbusTestProcess * self = DBUS_TEST_PROCESS(object);
++	DbusTestProcessPrivate *priv = dbus_test_process_get_instance_private(self);
+ 
+ 	switch (property_id) {
+ 	case PROP_EXECUTABLE:
+-		g_free(self->priv->executable);
+-		self->priv->executable = g_value_dup_string(value);
++		g_free(priv->executable);
++		priv->executable = g_value_dup_string(value);
+ 		break;
+ 	case PROP_PARAMETERS:
+-		g_array_free(self->priv->parameters, TRUE);
+-		self->priv->parameters = g_value_dup_boxed(value);
++		g_array_free(priv->parameters, TRUE);
++		priv->parameters = g_value_dup_boxed(value);
+ 		break;
+ 	default:
+ 		G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+@@ -245,15 +244,16 @@
+ 	gchar *message;
+ 	g_return_if_fail(DBUS_TEST_IS_PROCESS(data));
+ 	DbusTestProcess * process = DBUS_TEST_PROCESS(data);
++	DbusTestProcessPrivate *priv = dbus_test_process_get_instance_private(process);
+ 
+ 	if (pid != 0) {
+ 		g_spawn_close_pid(pid);
+-		process->priv->pid = 0;
++		priv->pid = 0;
+ 	}
+ 
+-	process->priv->complete = TRUE;
+-	process->priv->status = status;
+-	process->priv->watcher = 0;
++	priv->complete = TRUE;
++	priv->status = status;
++	priv->watcher = 0;
+ 
+ 	if (status) {
+ 		message = g_strdup_printf("Exited with status %d", status);
+@@ -271,6 +271,7 @@
+ {
+ 	g_return_val_if_fail(DBUS_TEST_IS_PROCESS(data), FALSE);
+ 	DbusTestProcess * process = DBUS_TEST_PROCESS(data);
++	DbusTestProcessPrivate *priv = dbus_test_process_get_instance_private(process);
+ 
+ 	gchar * line;
+ 	gsize termloc;
+@@ -294,7 +295,7 @@
+ 	} while (G_IO_IN & g_io_channel_get_buffer_condition(channel));
+ 
+ 	if (done) {
+-		process->priv->io_watch = 0;
++		priv->io_watch = 0;
+ 		// wait for proc_watcher to switch state to FINISHED
+ 		return FALSE;
+ 	}
+@@ -307,16 +308,17 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_PROCESS(task));
+ 	DbusTestProcess * process = DBUS_TEST_PROCESS(task);
++	DbusTestProcessPrivate *priv = dbus_test_process_get_instance_private(process);
+ 
+ 	gchar * current_dir = g_get_current_dir();
+ 
+ 	gchar ** argv;
+-	argv = g_new0(gchar *, process->priv->parameters->len + 2);
++	argv = g_new0(gchar *, priv->parameters->len + 2);
+ 
+-	argv[0] = process->priv->executable;
++	argv[0] = priv->executable;
+ 	guint i;
+-	for (i = 0; i < process->priv->parameters->len; i++) {
+-		argv[i + 1] = g_array_index(process->priv->parameters, gchar *, i);
++	for (i = 0; i < priv->parameters->len; i++) {
++		argv[i + 1] = g_array_index(priv->parameters, gchar *, i);
+ 	}
+ 
+ 	GError * error = NULL;
+@@ -327,7 +329,7 @@
+ 	                         G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, /* flags */
+ 	                         NULL, /* child setup func */
+ 	                         NULL, /* child setup data */
+-							 &(process->priv->pid), /* PID */
++							 &(priv->pid), /* PID */
+ 	                         NULL, /* stdin */
+ 	                         &proc_stdout, /* stdout */
+ 	                         NULL, /* stderr */
+@@ -336,27 +338,27 @@
+ 	g_free(argv);
+ 
+ 	if (error != NULL) {
+-		g_warning("Unable to start process '%s': %s", process->priv->executable, error->message);
+-		process->priv->complete = TRUE;
+-		process->priv->status = -1;
++		g_warning("Unable to start process '%s': %s", priv->executable, error->message);
++		priv->complete = TRUE;
++		priv->status = -1;
+ 		g_signal_emit_by_name(G_OBJECT(process), DBUS_TEST_TASK_SIGNAL_STATE_CHANGED, DBUS_TEST_TASK_STATE_FINISHED, NULL);
+ 		return;
+ 	}
+ 
+ 	if (TRUE) {
+-		gchar * message = g_strdup_printf("Started with PID: %d", process->priv->pid);
++		gchar * message = g_strdup_printf("Started with PID: %d", priv->pid);
+ 		dbus_test_task_print(task, message);
+ 		g_free(message);
+ 	}
+ 
+-	process->priv->io_chan = g_io_channel_unix_new(proc_stdout);
+-	g_io_channel_set_buffer_size(process->priv->io_chan, 10 * 1024 * 1024); /* 10 MB should be enough for anyone */
+-	process->priv->io_watch = g_io_add_watch(process->priv->io_chan,
++	priv->io_chan = g_io_channel_unix_new(proc_stdout);
++	g_io_channel_set_buffer_size(priv->io_chan, 10 * 1024 * 1024); /* 10 MB should be enough for anyone */
++	priv->io_watch = g_io_add_watch(priv->io_chan,
+ 	                                         G_IO_IN | G_IO_HUP | G_IO_ERR, /* conditions */
+ 	                                         proc_writes, /* func */
+ 	                                         process); /* func data */
+ 
+-	process->priv->watcher = g_child_watch_add(process->priv->pid, proc_watcher, process);
++	priv->watcher = g_child_watch_add(priv->pid, proc_watcher, process);
+ 
+ 	g_signal_emit_by_name(G_OBJECT(process), DBUS_TEST_TASK_SIGNAL_STATE_CHANGED, DBUS_TEST_TASK_STATE_RUNNING, NULL);
+ 
+@@ -387,9 +389,10 @@
+ dbus_test_process_get_pid (DbusTestProcess * process)
+ {
+ 	g_return_val_if_fail(DBUS_TEST_IS_PROCESS(process), 0);
++	DbusTestProcessPrivate *priv = dbus_test_process_get_instance_private(process);
+ 
+ 	if (get_state(DBUS_TEST_TASK(process)) == DBUS_TEST_TASK_STATE_RUNNING) {
+-		return process->priv->pid;
++		return priv->pid;
+ 	}
+ 
+ 	return 0;
+@@ -401,8 +404,10 @@
+ 	g_return_if_fail(DBUS_TEST_IS_PROCESS(process));
+ 	g_return_if_fail(parameter != NULL);
+ 
++	DbusTestProcessPrivate *priv = dbus_test_process_get_instance_private(process);
++
+ 	gchar * newstr = g_strdup(parameter);
+-	g_array_append_val(process->priv->parameters, newstr);
++	g_array_append_val(priv->parameters, newstr);
+ 
+ 	return;
+ }
+@@ -412,12 +417,13 @@
+ {
+ 	g_return_val_if_fail(DBUS_TEST_IS_PROCESS(task), DBUS_TEST_TASK_STATE_FINISHED);
+ 	DbusTestProcess * process = DBUS_TEST_PROCESS(task);
++	DbusTestProcessPrivate *priv = dbus_test_process_get_instance_private(process);
+ 
+-	if (process->priv->complete) {
++	if (priv->complete) {
+ 		return DBUS_TEST_TASK_STATE_FINISHED;
+ 	}
+ 
+-	if (process->priv->pid != 0) {
++	if (priv->pid != 0) {
+ 		return DBUS_TEST_TASK_STATE_RUNNING;
+ 	}
+ 
+@@ -429,12 +435,13 @@
+ {
+ 	g_return_val_if_fail(DBUS_TEST_IS_PROCESS(task), FALSE);
+ 	DbusTestProcess * process = DBUS_TEST_PROCESS(task);
++	DbusTestProcessPrivate *priv = dbus_test_process_get_instance_private(process);
+ 
+-	if (!process->priv->complete) {
++	if (!priv->complete) {
+ 		return FALSE;
+ 	}
+ 
+-	if (process->priv->status == 0) {
++	if (priv->status == 0) {
+ 		return TRUE;
+ 	}
+ 
+--- a/libdbustest/process.h
++++ b/libdbustest/process.h
+@@ -35,7 +35,6 @@
+ 
+ typedef struct _DbusTestProcess         DbusTestProcess;
+ typedef struct _DbusTestProcessClass    DbusTestProcessClass;
+-typedef struct _DbusTestProcessPrivate  DbusTestProcessPrivate;
+ 
+ struct _DbusTestProcessClass {
+ 	DbusTestTaskClass parent_class;
+@@ -43,7 +42,6 @@
+ 
+ struct _DbusTestProcess {
+ 	DbusTestTask parent;
+-	DbusTestProcessPrivate * priv;
+ };
+ 
+ GType dbus_test_process_get_type (void);
+--- a/libdbustest/service.c
++++ b/libdbustest/service.c
+@@ -43,7 +43,7 @@
+ 	STATE_FINISHED
+ };
+ 
+-struct _DbusTestServicePrivate {
++typedef struct {
+ 	GQueue tasks_first;
+ 	GQueue tasks_normal;
+ 	GQueue tasks_last;
+@@ -67,28 +67,23 @@
+ 	guint watchdog_source;
+ 
+ 	DbusTestServiceBus bus_type;
+-};
++} DbusTestServicePrivate;
+ 
+ #define SERVICE_CHANGE_HANDLER  "dbus-test-service-change-handler"
+ 
+-#define DBUS_TEST_SERVICE_GET_PRIVATE(o) \
+-(G_TYPE_INSTANCE_GET_PRIVATE ((o), DBUS_TEST_TYPE_SERVICE, DbusTestServicePrivate))
+-
+ static void dbus_test_service_class_init (DbusTestServiceClass *klass);
+ static void dbus_test_service_init       (DbusTestService *self);
+ static void dbus_test_service_dispose    (GObject *object);
+ static void dbus_test_service_finalize   (GObject *object);
+ static gboolean watchdog_ping            (gpointer user_data);
+ 
+-G_DEFINE_TYPE (DbusTestService, dbus_test_service, G_TYPE_OBJECT);
++G_DEFINE_TYPE_WITH_PRIVATE (DbusTestService, dbus_test_service, G_TYPE_OBJECT);
+ 
+ static void
+ dbus_test_service_class_init (DbusTestServiceClass *klass)
+ {
+ 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+ 
+-	g_type_class_add_private (klass, sizeof (DbusTestServicePrivate));
+-
+ 	object_class->dispose = dbus_test_service_dispose;
+ 	object_class->finalize = dbus_test_service_finalize;
+ 
+@@ -98,35 +93,35 @@
+ static void
+ dbus_test_service_init (DbusTestService *self)
+ {
+-	self->priv = DBUS_TEST_SERVICE_GET_PRIVATE(self);
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(self);
+ 
+-	g_queue_init(&self->priv->tasks_first);
+-	g_queue_init(&self->priv->tasks_normal);
+-	g_queue_init(&self->priv->tasks_last);
++	g_queue_init(&priv->tasks_first);
++	g_queue_init(&priv->tasks_normal);
++	g_queue_init(&priv->tasks_last);
+ 
+-	self->priv->mainloop = g_main_loop_new(NULL, FALSE);
+-	self->priv->state = STATE_INIT;
++	priv->mainloop = g_main_loop_new(NULL, FALSE);
++	priv->state = STATE_INIT;
+ 
+-	self->priv->daemon_crashed = FALSE;
++	priv->daemon_crashed = FALSE;
+ 
+-	self->priv->dbus = 0;
+-	self->priv->dbus_watch = 0;
+-	self->priv->dbus_io = NULL;
+-	self->priv->dbus_io_watch = 0;
+-	self->priv->dbus_daemon = g_strdup("dbus-daemon");
+-	self->priv->dbus_configfile = g_strdup(DEFAULT_SESSION_CONF);
++	priv->dbus = 0;
++	priv->dbus_watch = 0;
++	priv->dbus_io = NULL;
++	priv->dbus_io_watch = 0;
++	priv->dbus_daemon = g_strdup("dbus-daemon");
++	priv->dbus_configfile = g_strdup(DEFAULT_SESSION_CONF);
+ 
+-	self->priv->first_time = TRUE;
+-	self->priv->keep_env = FALSE;
++	priv->first_time = TRUE;
++	priv->keep_env = FALSE;
+ 
+-	self->priv->watchdog = g_object_new(DBUS_TEST_TYPE_WATCHDOG, NULL);
+-	self->priv->watchdog_source = g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
++	priv->watchdog = g_object_new(DBUS_TEST_TYPE_WATCHDOG, NULL);
++	priv->watchdog_source = g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
+ 	                                                         5,
+ 	                                                         watchdog_ping,
+-	                                                         g_object_ref(self->priv->watchdog),
++	                                                         g_object_ref(priv->watchdog),
+ 	                                                         g_object_unref);
+ 
+-	self->priv->bus_type = DBUS_TEST_SERVICE_BUS_SESSION;
++	priv->bus_type = DBUS_TEST_SERVICE_BUS_SESSION;
+ 
+ 	return;
+ }
+@@ -150,58 +145,59 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_SERVICE(object));
+ 	DbusTestService * self = DBUS_TEST_SERVICE(object);
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(self);
+ 
+-	if (!g_queue_is_empty(&self->priv->tasks_last)) {
+-		g_queue_foreach(&self->priv->tasks_last, task_unref, NULL);
+-		g_queue_clear(&self->priv->tasks_last);
++	if (!g_queue_is_empty(&priv->tasks_last)) {
++		g_queue_foreach(&priv->tasks_last, task_unref, NULL);
++		g_queue_clear(&priv->tasks_last);
+ 	}
+ 
+-	if (!g_queue_is_empty(&self->priv->tasks_normal)) {
+-		g_queue_foreach(&self->priv->tasks_normal, task_unref, NULL);
+-		g_queue_clear(&self->priv->tasks_normal);
++	if (!g_queue_is_empty(&priv->tasks_normal)) {
++		g_queue_foreach(&priv->tasks_normal, task_unref, NULL);
++		g_queue_clear(&priv->tasks_normal);
+ 	}
+ 
+-	if (!g_queue_is_empty(&self->priv->tasks_first)) {
+-		g_queue_foreach(&self->priv->tasks_first, task_unref, NULL);
+-		g_queue_clear(&self->priv->tasks_first);
++	if (!g_queue_is_empty(&priv->tasks_first)) {
++		g_queue_foreach(&priv->tasks_first, task_unref, NULL);
++		g_queue_clear(&priv->tasks_first);
+ 	}
+ 
+-	if (self->priv->dbus_watch != 0) {
+-		g_source_remove(self->priv->dbus_watch);
+-		self->priv->dbus_watch = 0;
++	if (priv->dbus_watch != 0) {
++		g_source_remove(priv->dbus_watch);
++		priv->dbus_watch = 0;
+ 	}
+ 
+-	if (self->priv->dbus_io_watch != 0) {
+-		g_source_remove(self->priv->dbus_io_watch);
+-		self->priv->dbus_io_watch = 0;
++	if (priv->dbus_io_watch != 0) {
++		g_source_remove(priv->dbus_io_watch);
++		priv->dbus_io_watch = 0;
+ 	}
+ 
+-	if (self->priv->dbus_io != NULL) {
+-		g_io_channel_shutdown(self->priv->dbus_io, TRUE, NULL);
+-		g_io_channel_unref(self->priv->dbus_io);
+-		self->priv->dbus_io = NULL;
++	if (priv->dbus_io != NULL) {
++		g_io_channel_shutdown(priv->dbus_io, TRUE, NULL);
++		g_io_channel_unref(priv->dbus_io);
++		priv->dbus_io = NULL;
+ 	}
+ 
+ 	g_print("DBus daemon: Shutdown\n");
+-	if (self->priv->dbus != 0) {
+-		gchar * cmd = g_strdup_printf("kill -9 %d", self->priv->dbus);
++	if (priv->dbus != 0) {
++		gchar * cmd = g_strdup_printf("kill -9 %d", priv->dbus);
+ 		g_spawn_command_line_async(cmd, NULL);
+ 		g_free(cmd);
+ 
+-		g_spawn_close_pid(self->priv->dbus);
+-		self->priv->dbus = 0;
++		g_spawn_close_pid(priv->dbus);
++		priv->dbus = 0;
+ 	}
+ 
+-	if (self->priv->mainloop != NULL) {
+-		g_main_loop_unref(self->priv->mainloop);
+-		self->priv->mainloop = NULL;
++	if (priv->mainloop != NULL) {
++		g_main_loop_unref(priv->mainloop);
++		priv->mainloop = NULL;
+ 	}
+ 
+-	g_clear_object(&self->priv->watchdog);
++	g_clear_object(&priv->watchdog);
+ 
+-	if (self->priv->watchdog_source != 0) {
+-		g_source_remove(self->priv->watchdog_source);
+-		self->priv->watchdog_source = 0;
++	if (priv->watchdog_source != 0) {
++		g_source_remove(priv->watchdog_source);
++		priv->watchdog_source = 0;
+ 	}
+ 
+ 	G_OBJECT_CLASS (dbus_test_service_parent_class)->dispose (object);
+@@ -213,11 +209,12 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_SERVICE(object));
+ 	DbusTestService * self = DBUS_TEST_SERVICE(object);
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(self);
+ 
+-	g_free(self->priv->dbus_daemon);
+-	self->priv->dbus_daemon = NULL;
+-	g_free(self->priv->dbus_configfile);
+-	self->priv->dbus_configfile = NULL;
++	g_free(priv->dbus_daemon);
++	priv->dbus_daemon = NULL;
++	g_free(priv->dbus_configfile);
++	priv->dbus_configfile = NULL;
+ 
+ 	G_OBJECT_CLASS (dbus_test_service_parent_class)->finalize (object);
+ 	return;
+@@ -273,9 +270,11 @@
+ static gboolean
+ all_tasks_bus_match (DbusTestService * service, DbusTestTask * task, G_GNUC_UNUSED gpointer user_data)
+ {
+-	return service->priv->bus_type == DBUS_TEST_SERVICE_BUS_BOTH ||
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
++	return priv->bus_type == DBUS_TEST_SERVICE_BUS_BOTH ||
+ 		dbus_test_task_get_bus(task) == DBUS_TEST_SERVICE_BUS_BOTH ||
+-		dbus_test_task_get_bus(task) == service->priv->bus_type;
++		dbus_test_task_get_bus(task) == priv->bus_type;
+ }
+ 
+ typedef struct {
+@@ -301,6 +300,8 @@
+ static gboolean
+ all_tasks (DbusTestService * service, gboolean (*helper) (DbusTestService * service, DbusTestTask * task, gpointer user_data), gpointer user_data)
+ {
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
+ 	all_tasks_helper_data_t data = {
+ 		.passing = TRUE,
+ 		.service = service,
+@@ -308,17 +309,17 @@
+ 		.user_data = user_data
+ 	};
+ 
+-	g_queue_foreach(&service->priv->tasks_first, all_tasks_helper, &data);
++	g_queue_foreach(&priv->tasks_first, all_tasks_helper, &data);
+ 	if (!data.passing) {
+ 		return FALSE;
+ 	}
+ 
+-	g_queue_foreach(&service->priv->tasks_normal, all_tasks_helper, &data);
++	g_queue_foreach(&priv->tasks_normal, all_tasks_helper, &data);
+ 	if (!data.passing) {
+ 		return FALSE;
+ 	}
+ 
+-	g_queue_foreach(&service->priv->tasks_last, all_tasks_helper, &data);
++	g_queue_foreach(&priv->tasks_last, all_tasks_helper, &data);
+ 	if (!data.passing) {
+ 		return FALSE;
+ 	}
+@@ -356,13 +357,15 @@
+ {
+ 	glong length = 0;
+ 
+-	g_queue_foreach(&service->priv->tasks_first, task_get_name_length, &length);
+-	g_queue_foreach(&service->priv->tasks_normal, task_get_name_length, &length);
+-	g_queue_foreach(&service->priv->tasks_last, task_get_name_length, &length);
+-
+-	g_queue_foreach(&service->priv->tasks_first, task_set_name_length, &length);
+-	g_queue_foreach(&service->priv->tasks_normal, task_set_name_length, &length);
+-	g_queue_foreach(&service->priv->tasks_last, task_set_name_length, &length);
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
++	g_queue_foreach(&priv->tasks_first, task_get_name_length, &length);
++	g_queue_foreach(&priv->tasks_normal, task_get_name_length, &length);
++	g_queue_foreach(&priv->tasks_last, task_get_name_length, &length);
++
++	g_queue_foreach(&priv->tasks_first, task_set_name_length, &length);
++	g_queue_foreach(&priv->tasks_normal, task_set_name_length, &length);
++	g_queue_foreach(&priv->tasks_last, task_set_name_length, &length);
+ 
+ 	return;
+ }
+@@ -381,6 +384,7 @@
+ dbus_writes (GIOChannel * channel, GIOCondition condition, gpointer data)
+ {
+ 	DbusTestService * service = DBUS_TEST_SERVICE(data);
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
+ 
+ 	if (condition & G_IO_ERR) {
+ 		g_critical("DBus writing failure!");
+@@ -395,12 +399,12 @@
+ 
+ 	g_print("DBus daemon: %s\n", line);
+ 
+-	if (service->priv->first_time) {
+-		service->priv->first_time = FALSE;
++	if (priv->first_time) {
++		priv->first_time = FALSE;
+ 
+ 		g_setenv("DBUS_STARTER_ADDRESS", line, TRUE);
+ 
+-		switch (service->priv->bus_type) {
++		switch (priv->bus_type) {
+ 		case DBUS_TEST_SERVICE_BUS_SESSION:
+ 			g_setenv("DBUS_SESSION_BUS_ADDRESS", line, TRUE);
+ 			g_setenv("DBUS_STARTER_BUS_TYPE", "session", TRUE);
+@@ -416,8 +420,8 @@
+ 			break;
+ 		}
+ 
+-		if (service->priv->state == STATE_DAEMON_STARTING) {
+-			g_main_loop_quit(service->priv->mainloop);
++		if (priv->state == STATE_DAEMON_STARTING) {
++			g_main_loop_quit(priv->mainloop);
+ 		}
+ 	}
+ 
+@@ -430,10 +434,12 @@
+ dbus_watcher (GPid pid, G_GNUC_UNUSED gint status, gpointer data)
+ {
+ 	DbusTestService * service = DBUS_TEST_SERVICE(data);
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
+ 	g_critical("DBus Daemon exited abruptly!");
+ 
+-	service->priv->daemon_crashed = TRUE;
+-	g_main_loop_quit(DBUS_TEST_SERVICE(data)->priv->mainloop);
++	priv->daemon_crashed = TRUE;
++	g_main_loop_quit(priv->mainloop);
+ 
+ 	if (pid != 0) {
+ 		g_spawn_close_pid(pid);
+@@ -451,24 +457,26 @@
+ static void
+ start_daemon (DbusTestService * service)
+ {
+-	if (service->priv->dbus != 0) {
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
++	if (priv->dbus != 0) {
+ 		return;
+ 	}
+ 
+-	service->priv->state = STATE_DAEMON_STARTING;
++	priv->state = STATE_DAEMON_STARTING;
+ 
+ 	gint dbus_stdout = 0;
+ 	GError * error = NULL;
+ 	gchar * blank[1] = {NULL};
+ 	gchar * current_dir = g_get_current_dir();
+-	gchar * dbus_startup[] = {service->priv->dbus_daemon, "--config-file", service->priv->dbus_configfile, "--print-address", NULL};
++	gchar * dbus_startup[] = {priv->dbus_daemon, "--config-file", priv->dbus_configfile, "--print-address", NULL};
+ 	g_spawn_async_with_pipes(current_dir,
+ 	                         dbus_startup, /* argv */
+-	                         service->priv->keep_env ? NULL : blank, /* envp */
++	                         priv->keep_env ? NULL : blank, /* envp */
+ 	                         G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, /* flags */
+ 	                         (GSpawnChildSetupFunc) dbus_child_setup, /* child setup func */
+ 	                         NULL, /* child setup data */
+-	                         &service->priv->dbus, /* PID */
++	                         &priv->dbus, /* PID */
+ 	                         NULL, /* stdin */
+ 	                         &dbus_stdout, /* stdout */
+ 	                         NULL, /* stderr */
+@@ -479,25 +487,25 @@
+ 	if (error != NULL) {
+ 		g_critical("Unable to start dbus daemon: %s", error->message);
+ 		g_error_free(error);
+-		service->priv->daemon_crashed = TRUE;
++		priv->daemon_crashed = TRUE;
+ 		return;
+ 	}
+ 
+-	dbus_test_watchdog_add_pid(service->priv->watchdog, service->priv->dbus);
++	dbus_test_watchdog_add_pid(priv->watchdog, priv->dbus);
+ 
+-	service->priv->dbus_watch = g_child_watch_add(service->priv->dbus, dbus_watcher, service);
++	priv->dbus_watch = g_child_watch_add(priv->dbus, dbus_watcher, service);
+ 
+-	service->priv->dbus_io = g_io_channel_unix_new(dbus_stdout);
+-	service->priv->dbus_io_watch = g_io_add_watch(service->priv->dbus_io,
++	priv->dbus_io = g_io_channel_unix_new(dbus_stdout);
++	priv->dbus_io_watch = g_io_add_watch(priv->dbus_io,
+ 	                                              G_IO_IN | G_IO_HUP | G_IO_ERR, /* conditions */
+ 	                                              dbus_writes, /* func */
+ 	                                              service); /* func data */
+ 
+-	g_main_loop_run(service->priv->mainloop);
++	g_main_loop_run(priv->mainloop);
+ 
+ 	/* we should have a usable connection now, let's check */
+ 	const gchar * bus_address = NULL;
+-	if (service->priv->bus_type == DBUS_TEST_SERVICE_BUS_SYSTEM) {
++	if (priv->bus_type == DBUS_TEST_SERVICE_BUS_SYSTEM) {
+ 		bus_address = g_getenv("DBUS_SYSTEM_BUS_ADDRESS");
+ 	} else {
+ 		bus_address = g_getenv("DBUS_SESSION_BUS_ADDRESS");
+@@ -516,13 +524,13 @@
+ 	g_strfreev(tokens);
+ 
+ 	if (!is_valid) {
+-		service->priv->state = STATE_DAEMON_FAILED;
++		priv->state = STATE_DAEMON_FAILED;
+ 		g_critical ("DBus daemon failed: Bus address is not supported");
+ 		g_error_free (error);
+ 		return;
+ 	}
+ 
+-	service->priv->state = STATE_DAEMON_STARTED;
++	priv->state = STATE_DAEMON_STARTED;
+ 	return;
+ }
+ 
+@@ -532,43 +540,45 @@
+ 	g_return_if_fail(DBUS_TEST_SERVICE(service));
+ 	g_return_if_fail(all_tasks(service, all_tasks_bus_match, NULL));
+ 
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
+ 	start_daemon(service);
+ 	g_return_if_fail(g_getenv("DBUS_SESSION_BUS_ADDRESS") != NULL ||
+ 		g_getenv("DBUS_SYSTEM_BUS_ADDRESS") != NULL);
+-	g_return_if_fail(service->priv->state != STATE_DAEMON_FAILED);
++	g_return_if_fail(priv->state != STATE_DAEMON_FAILED);
+ 
+ 	if (all_tasks(service, all_tasks_started_helper, NULL)) {
+ 		/* If we have all started we can mark it as such as long
+ 		   as we understand where we could hit this case */
+-		if (service->priv->state == STATE_INIT || service->priv->state == STATE_DAEMON_STARTED) {
+-			service->priv->state = STATE_STARTED;
++		if (priv->state == STATE_INIT || priv->state == STATE_DAEMON_STARTED) {
++			priv->state = STATE_STARTED;
+ 		}
+ 		return;
+ 	}
+ 
+ 	normalize_name_lengths(service);
+ 
+-	g_queue_foreach(&service->priv->tasks_first, task_starter, NULL);
+-	if (!g_queue_is_empty(&service->priv->tasks_first)) {
++	g_queue_foreach(&priv->tasks_first, task_starter, NULL);
++	if (!g_queue_is_empty(&priv->tasks_first)) {
+ 		g_usleep(100000);
+ 	}
+ 
+-	g_queue_foreach(&service->priv->tasks_normal, task_starter, NULL);
++	g_queue_foreach(&priv->tasks_normal, task_starter, NULL);
+ 
+-	if (!g_queue_is_empty(&service->priv->tasks_last)) {
++	if (!g_queue_is_empty(&priv->tasks_last)) {
+ 		g_usleep(100000);
+ 	}
+-	g_queue_foreach(&service->priv->tasks_last, task_starter, NULL);
++	g_queue_foreach(&priv->tasks_last, task_starter, NULL);
+ 
+ 	if (!all_tasks(service, all_tasks_started_helper, NULL)) {
+-		service->priv->state = STATE_STARTING;
+-		g_main_loop_run(service->priv->mainloop);
++		priv->state = STATE_STARTING;
++		g_main_loop_run(priv->mainloop);
+ 
+ 		/* This should never happen, but let's be sure */
+ 		g_return_if_fail(all_tasks(service, all_tasks_started_helper, NULL));
+ 	}
+ 
+-	service->priv->state = STATE_STARTED;
++	priv->state = STATE_STARTED;
+ 
+ 	return;
+ }
+@@ -582,7 +592,9 @@
+ static int
+ get_status (DbusTestService * service)
+ {
+-	if (service->priv->daemon_crashed || service->priv->state == STATE_DAEMON_FAILED) {
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
++	if (priv->daemon_crashed || priv->state == STATE_DAEMON_FAILED) {
+ 		return -1;
+ 	}
+ 
+@@ -597,20 +609,21 @@
+ dbus_test_service_run (DbusTestService * service)
+ {
+ 	g_return_val_if_fail(DBUS_TEST_SERVICE(service), -1);
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
+ 
+ 	dbus_test_service_start_tasks(service);
+-	g_return_val_if_fail(service->priv->state == STATE_STARTED, get_status(service));
++	g_return_val_if_fail(priv->state == STATE_STARTED, get_status(service));
+ 
+ 	if (all_tasks(service, all_tasks_finished_helper, NULL)) {
+ 		return get_status(service);
+ 	}
+ 
+-	service->priv->state = STATE_RUNNING;
+-	g_main_loop_run(service->priv->mainloop);
++	priv->state = STATE_RUNNING;
++	g_main_loop_run(priv->mainloop);
+ 
+ 	/* This should never happen, but let's be sure */
+ 	g_return_val_if_fail(all_tasks(service, all_tasks_finished_helper, NULL), -1);
+-	service->priv->state = STATE_FINISHED;
++	priv->state = STATE_FINISHED;
+ 
+ 	return get_status(service);
+ }
+@@ -620,14 +633,15 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_SERVICE(user_data));
+ 	DbusTestService * service = DBUS_TEST_SERVICE(user_data);
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
+ 
+-	if (service->priv->state == STATE_STARTING && all_tasks(service, all_tasks_started_helper, NULL)) {
+-		g_main_loop_quit(service->priv->mainloop);
++	if (priv->state == STATE_STARTING && all_tasks(service, all_tasks_started_helper, NULL)) {
++		g_main_loop_quit(priv->mainloop);
+ 		return;
+ 	}
+ 
+-	if (service->priv->state == STATE_RUNNING && all_tasks(service, all_tasks_finished_helper, NULL)) {
+-		g_main_loop_quit(service->priv->mainloop);
++	if (priv->state == STATE_RUNNING && all_tasks(service, all_tasks_finished_helper, NULL)) {
++		g_main_loop_quit(priv->mainloop);
+ 		return;
+ 	}
+ 
+@@ -650,17 +664,19 @@
+ 	   goals for busness. Fail early. */
+ 	g_return_if_fail(all_tasks_bus_match(service, task, NULL));
+ 
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
+ 	GQueue * queue = NULL;
+ 
+ 	switch (prio) {
+ 	case DBUS_TEST_SERVICE_PRIORITY_FIRST:
+-		queue = &service->priv->tasks_first;
++		queue = &priv->tasks_first;
+ 		break;
+ 	case DBUS_TEST_SERVICE_PRIORITY_NORMAL:
+-		queue = &service->priv->tasks_normal;
++		queue = &priv->tasks_normal;
+ 		break;
+ 	case DBUS_TEST_SERVICE_PRIORITY_LAST:
+-		queue = &service->priv->tasks_last;
++		queue = &priv->tasks_last;
+ 		break;
+ 	default:
+ 		g_assert_not_reached();
+@@ -690,10 +706,12 @@
+ 	g_return_val_if_fail(DBUS_TEST_IS_SERVICE(service), FALSE);
+ 	g_return_val_if_fail(DBUS_TEST_IS_TASK(task), FALSE);
+ 
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
+ 	guint count = 0;
+-	count += g_queue_remove_all(&service->priv->tasks_first, task);
+-	count += g_queue_remove_all(&service->priv->tasks_normal, task);
+-	count += g_queue_remove_all(&service->priv->tasks_last, task);
++	count += g_queue_remove_all(&priv->tasks_first, task);
++	count += g_queue_remove_all(&priv->tasks_normal, task);
++	count += g_queue_remove_all(&priv->tasks_last, task);
+ 
+ 	/* Checking the count here so that we can generate a warning. Guessing that
+ 	   this actually never happens, but it's easy to check */
+@@ -718,8 +736,11 @@
+ dbus_test_service_set_daemon (DbusTestService * service, const gchar * daemon)
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_SERVICE(service));
+-	g_free(service->priv->dbus_daemon);
+-	service->priv->dbus_daemon = g_strdup(daemon);
++
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
++	g_free(priv->dbus_daemon);
++	priv->dbus_daemon = g_strdup(daemon);
+ 	return;
+ }
+ 
+@@ -727,8 +748,11 @@
+ dbus_test_service_set_conf_file (DbusTestService * service, const gchar * conffile)
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_SERVICE(service));
+-	g_free(service->priv->dbus_configfile);
+-	service->priv->dbus_configfile = g_strdup(conffile);
++
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
++	g_free(priv->dbus_configfile);
++	priv->dbus_configfile = g_strdup(conffile);
+ 	return;
+ }
+ 
+@@ -736,35 +760,44 @@
+ dbus_test_service_set_keep_environment (DbusTestService * service, gboolean keep_env)
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_SERVICE(service));
+-	service->priv->keep_env = keep_env;
++
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
++	priv->keep_env = keep_env;
+ }
+ 
+ void
+ dbus_test_service_stop (DbusTestService * service)
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_SERVICE(service));
+-	g_main_loop_quit(service->priv->mainloop);
++
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
++	g_main_loop_quit(priv->mainloop);
+ 	return;
+ }
+ 
+ void dbus_test_service_set_bus (DbusTestService * service, DbusTestServiceBus bus)
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_SERVICE(service));
+-	g_return_if_fail(service->priv->dbus == 0); /* we can't change after we're running */
++
++	DbusTestServicePrivate *priv = dbus_test_service_get_instance_private(service);
++
++	g_return_if_fail(priv->dbus == 0); /* we can't change after we're running */
+ 
+ 	if (bus == DBUS_TEST_SERVICE_BUS_BOTH) {
+ 		g_warning("Setting bus to BOTH, which is typically only used as a default value.");
+ 	}
+ 
+-	service->priv->bus_type = bus;
++	priv->bus_type = bus;
+ 	g_warn_if_fail(all_tasks(service, all_tasks_bus_match, NULL));
+ 
+ 	if (bus == DBUS_TEST_SERVICE_BUS_SYSTEM) {
+-		g_free(service->priv->dbus_configfile);
+-		service->priv->dbus_configfile = g_strdup(DEFAULT_SYSTEM_CONF);
++		g_free(priv->dbus_configfile);
++		priv->dbus_configfile = g_strdup(DEFAULT_SYSTEM_CONF);
+ 	} else {
+ 		/* BOTH and SESSION get the session config — for backwards compatibility there */
+-		g_free(service->priv->dbus_configfile);
+-		service->priv->dbus_configfile = g_strdup(DEFAULT_SESSION_CONF);
++		g_free(priv->dbus_configfile);
++		priv->dbus_configfile = g_strdup(DEFAULT_SESSION_CONF);
+ 	}
+ }
+--- a/libdbustest/service.h
++++ b/libdbustest/service.h
+@@ -39,7 +39,6 @@
+ 
+ typedef struct _DbusTestService         DbusTestService;
+ typedef struct _DbusTestServiceClass    DbusTestServiceClass;
+-typedef struct _DbusTestServicePrivate  DbusTestServicePrivate;
+ 
+ struct _DbusTestServiceClass {
+ 	GObjectClass parent_class;
+@@ -47,7 +46,6 @@
+ 
+ struct _DbusTestService {
+ 	GObject parent;
+-	DbusTestServicePrivate * priv;
+ };
+ 
+ typedef enum
+--- a/libdbustest/task.c
++++ b/libdbustest/task.c
+@@ -24,7 +24,7 @@
+ #include "dbus-test.h"
+ #include <gio/gio.h>
+ 
+-struct _DbusTestTaskPrivate {
++typedef struct {
+ 	DbusTestTaskReturn return_type;
+ 
+ 	gchar * wait_for;
+@@ -39,7 +39,7 @@
+ 	gboolean wait_until_complete;
+ 
+ 	DbusTestServiceBus preferred_bus;
+-};
++} DbusTestTaskPrivate;
+ 
+ /* Signals */
+ enum {
+@@ -47,15 +47,12 @@
+ 	LAST_SIGNAL /* Don't touch! */
+ };
+ 
+-#define DBUS_TEST_TASK_GET_PRIVATE(o) \
+-(G_TYPE_INSTANCE_GET_PRIVATE ((o), DBUS_TEST_TYPE_TASK, DbusTestTaskPrivate))
+-
+ static void dbus_test_task_class_init (DbusTestTaskClass *klass);
+ static void dbus_test_task_init       (DbusTestTask *self);
+ static void dbus_test_task_dispose    (GObject *object);
+ static void dbus_test_task_finalize   (GObject *object);
+ 
+-G_DEFINE_TYPE (DbusTestTask, dbus_test_task, G_TYPE_OBJECT);
++G_DEFINE_TYPE_WITH_PRIVATE (DbusTestTask, dbus_test_task, G_TYPE_OBJECT);
+ 
+ static guint signals[LAST_SIGNAL] = {0};
+ 
+@@ -64,8 +61,6 @@
+ {
+ 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+ 
+-	g_type_class_add_private (klass, sizeof (DbusTestTaskPrivate));
+-
+ 	object_class->dispose = dbus_test_task_dispose;
+ 	object_class->finalize = dbus_test_task_finalize;
+ 
+@@ -89,22 +84,22 @@
+ {
+ 	static gint task_count = 0;
+ 
+-	self->priv = DBUS_TEST_TASK_GET_PRIVATE(self);
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(self);
+ 
+-	self->priv->return_type = DBUS_TEST_TASK_RETURN_NORMAL;
++	priv->return_type = DBUS_TEST_TASK_RETURN_NORMAL;
+ 
+-	self->priv->wait_for = NULL;
+-	self->priv->wait_for_bus = DBUS_TEST_SERVICE_BUS_BOTH;
+-	self->priv->wait_task = 0;
++	priv->wait_for = NULL;
++	priv->wait_for_bus = DBUS_TEST_SERVICE_BUS_BOTH;
++	priv->wait_task = 0;
+ 
+-	self->priv->name = g_strdup_printf("task-%d", task_count++);
+-	self->priv->name_padded = NULL;
+-	self->priv->padding_cnt = 0;
++	priv->name = g_strdup_printf("task-%d", task_count++);
++	priv->name_padded = NULL;
++	priv->padding_cnt = 0;
+ 
+-	self->priv->been_run = FALSE;
+-	self->priv->wait_until_complete = FALSE;
++	priv->been_run = FALSE;
++	priv->wait_until_complete = FALSE;
+ 
+-	self->priv->preferred_bus = DBUS_TEST_SERVICE_BUS_BOTH;
++	priv->preferred_bus = DBUS_TEST_SERVICE_BUS_BOTH;
+ 
+ 	return;
+ }
+@@ -114,10 +109,11 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_TASK(object));
+ 	DbusTestTask * self = DBUS_TEST_TASK(object);
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(self);
+ 
+-	if (self->priv->wait_task != 0) {
+-		g_bus_unwatch_name(self->priv->wait_task);
+-		self->priv->wait_task = 0;
++	if (priv->wait_task != 0) {
++		g_bus_unwatch_name(priv->wait_task);
++		priv->wait_task = 0;
+ 	}
+ 
+ 	G_OBJECT_CLASS (dbus_test_task_parent_class)->dispose (object);
+@@ -129,12 +125,13 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_TASK(object));
+ 	DbusTestTask * self = DBUS_TEST_TASK(object);
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(self);
+ 
+-	g_print("%s: Shutting down\n", self->priv->name);
++	g_print("%s: Shutting down\n", priv->name);
+ 
+-	g_free(self->priv->name);
+-	g_free(self->priv->name_padded);
+-	g_free(self->priv->wait_for);
++	g_free(priv->name);
++	g_free(priv->name_padded);
++	g_free(priv->wait_for);
+ 
+ 	G_OBJECT_CLASS (dbus_test_task_parent_class)->finalize (object);
+ 	return;
+@@ -154,16 +151,18 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_TASK(task));
+ 
+-	g_free(task->priv->name);
+-	g_free(task->priv->name_padded);
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
++
++	g_free(priv->name);
++	g_free(priv->name_padded);
+ 
+-	task->priv->name = g_strdup(name);
+-	if (task->priv->padding_cnt != 0 && task->priv->name != NULL) {
+-		gchar * fillstr = g_strnfill(task->priv->padding_cnt - g_utf8_strlen(task->priv->name, -1), ' ');
+-		task->priv->name_padded = g_strconcat(task->priv->name, fillstr, NULL);
++	priv->name = g_strdup(name);
++	if (priv->padding_cnt != 0 && priv->name != NULL) {
++		gchar * fillstr = g_strnfill(priv->padding_cnt - g_utf8_strlen(priv->name, -1), ' ');
++		priv->name_padded = g_strconcat(priv->name, fillstr, NULL);
+ 		g_free(fillstr);
+ 	} else {
+-		task->priv->name_padded = NULL;
++		priv->name_padded = NULL;
+ 	}
+ 
+ 	return;
+@@ -174,17 +173,19 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_TASK(task));
+ 
+-	g_free(task->priv->name_padded);
+-	task->priv->padding_cnt = chars;
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
+ 
+-	g_return_if_fail(task->priv->padding_cnt >= g_utf8_strlen(task->priv->name, -1));
++	g_free(priv->name_padded);
++	priv->padding_cnt = chars;
+ 
+-	if (chars != 0 && task->priv->name != NULL) {
+-		gchar * fillstr = g_strnfill(task->priv->padding_cnt - g_utf8_strlen(task->priv->name, -1), ' ');
+-		task->priv->name_padded = g_strconcat(task->priv->name, fillstr, NULL);
++	g_return_if_fail(priv->padding_cnt >= g_utf8_strlen(priv->name, -1));
++
++	if (chars != 0 && priv->name != NULL) {
++		gchar * fillstr = g_strnfill(priv->padding_cnt - g_utf8_strlen(priv->name, -1), ' ');
++		priv->name_padded = g_strconcat(priv->name, fillstr, NULL);
+ 		g_free(fillstr);
+ 	} else {
+-		task->priv->name_padded = NULL;
++		priv->name_padded = NULL;
+ 	}
+ 
+ 	return;
+@@ -200,18 +201,20 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_TASK(task));
+ 
+-	if (task->priv->wait_for != NULL) {
+-		g_free(task->priv->wait_for);
+-		task->priv->wait_for = NULL;
+-		task->priv->wait_for_bus = DBUS_TEST_SERVICE_BUS_BOTH;
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
++
++	if (priv->wait_for != NULL) {
++		g_free(priv->wait_for);
++		priv->wait_for = NULL;
++		priv->wait_for_bus = DBUS_TEST_SERVICE_BUS_BOTH;
+ 	}
+ 
+ 	if (dbus_name == NULL) {
+ 		return;
+ 	}
+ 
+-	task->priv->wait_for = g_strdup(dbus_name);
+-	task->priv->wait_for_bus = bus;
++	priv->wait_for = g_strdup(dbus_name);
++	priv->wait_for_bus = bus;
+ 
+ 	return;
+ }
+@@ -221,11 +224,13 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_TASK(task));
+ 
+-	if (ret != task->priv->return_type && dbus_test_task_get_state(task) == DBUS_TEST_TASK_STATE_FINISHED) {
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
++
++	if (ret != priv->return_type && dbus_test_task_get_state(task) == DBUS_TEST_TASK_STATE_FINISHED) {
+ 		g_warning("Changing return type after the task has finished");
+ 	}
+ 
+-	task->priv->return_type = ret;
++	priv->return_type = ret;
+ 	return;
+ }
+ 
+@@ -235,9 +240,11 @@
+ 	g_return_if_fail(DBUS_TEST_IS_TASK(task));
+ 	g_return_if_fail(message != NULL);
+ 
+-	gchar * name = task->priv->name;
+-	if (task->priv->name_padded != NULL) {
+-		name = task->priv->name_padded;
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
++
++	gchar * name = priv->name;
++	if (priv->name_padded != NULL) {
++		name = priv->name_padded;
+ 	}
+ 
+ 	g_print("%s: %s\n", name, message);
+@@ -250,7 +257,9 @@
+ {
+ 	g_return_val_if_fail(DBUS_TEST_IS_TASK(task), DBUS_TEST_TASK_STATE_FINISHED);
+ 
+-	if (task->priv->wait_task != 0) {
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
++
++	if (priv->wait_task != 0) {
+ 		return DBUS_TEST_TASK_STATE_WAITING;
+ 	}
+ 
+@@ -259,7 +268,7 @@
+ 		return klass->get_state(task);
+ 	}
+ 
+-	if (task->priv->been_run) {
++	if (priv->been_run) {
+ 		return DBUS_TEST_TASK_STATE_FINISHED;
+ 	} else {
+ 		return DBUS_TEST_TASK_STATE_INIT;
+@@ -271,7 +280,9 @@
+ {
+ 	g_return_val_if_fail(DBUS_TEST_IS_TASK(task), DBUS_TEST_TASK_RETURN_IGNORE);
+ 
+-	return task->priv->return_type;
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
++
++	return priv->return_type;
+ }
+ 
+ static void
+@@ -280,11 +291,13 @@
+ 	g_return_if_fail(DBUS_TEST_IS_TASK(user_data));
+ 	DbusTestTask * task = DBUS_TEST_TASK(user_data);
+ 
+-	g_bus_unwatch_name(task->priv->wait_task);
+-	task->priv->wait_task = 0;
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
++
++	g_bus_unwatch_name(priv->wait_task);
++	priv->wait_task = 0;
+ 
+ 	DbusTestTaskClass * klass = DBUS_TEST_TASK_GET_CLASS(task);
+-	task->priv->been_run = TRUE;
++	priv->been_run = TRUE;
+ 	if (klass->run != NULL) {
+ 		klass->run(task);
+ 	} else {
+@@ -299,17 +312,19 @@
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_TASK(task));
+ 
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
++
+ 	/* We're going to process the waiting at this level if we've been
+ 	   asked to do so */
+-	if (task->priv->wait_for != NULL) {
++	if (priv->wait_for != NULL) {
+ 		GBusType bustype = G_BUS_TYPE_SESSION;
+-		if (task->priv->wait_for_bus == DBUS_TEST_SERVICE_BUS_BOTH &&
+-				task->priv->preferred_bus == DBUS_TEST_SERVICE_BUS_SYSTEM) {
++		if (priv->wait_for_bus == DBUS_TEST_SERVICE_BUS_BOTH &&
++				priv->preferred_bus == DBUS_TEST_SERVICE_BUS_SYSTEM) {
+ 			bustype = G_BUS_TYPE_SYSTEM;
+ 		}
+ 
+-		task->priv->wait_task = g_bus_watch_name(bustype,
+-		                                         task->priv->wait_for,
++		priv->wait_task = g_bus_watch_name(bustype,
++		                                         priv->wait_for,
+ 		                                         G_BUS_NAME_WATCHER_FLAGS_NONE,
+ 		                                         wait_for_found,
+ 		                                         NULL,
+@@ -320,7 +335,7 @@
+ 	}
+ 
+ 	DbusTestTaskClass * klass = DBUS_TEST_TASK_GET_CLASS(task);
+-	task->priv->been_run = TRUE;
++	priv->been_run = TRUE;
+ 	if (klass->run != NULL) {
+ 		klass->run(task);
+ 	} else {
+@@ -334,10 +349,12 @@
+ dbus_test_task_passed (DbusTestTask * task)
+ {
+ 	g_return_val_if_fail(DBUS_TEST_IS_TASK(task), FALSE);
+-	g_return_val_if_fail(task->priv->been_run, FALSE);
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
++
++	g_return_val_if_fail(priv->been_run, FALSE);
+ 
+ 	/* If we don't care, we always pass */
+-	if (task->priv->return_type == DBUS_TEST_TASK_RETURN_IGNORE) {
++	if (priv->return_type == DBUS_TEST_TASK_RETURN_IGNORE) {
+ 		return TRUE;
+ 	}
+ 
+@@ -348,7 +365,7 @@
+ 
+ 	gboolean subret = klass->get_passed(task);
+ 
+-	if (task->priv->return_type == DBUS_TEST_TASK_RETURN_INVERT) {
++	if (priv->return_type == DBUS_TEST_TASK_RETURN_INVERT) {
+ 		return !subret;
+ 	}
+ 
+@@ -359,16 +376,18 @@
+ dbus_test_task_get_name (DbusTestTask * task)
+ {
+ 	g_return_val_if_fail(DBUS_TEST_IS_TASK(task), NULL);
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
+ 
+-	return task->priv->name;
++	return priv->name;
+ }
+ 
+ const gchar *
+ dbus_test_task_get_wait_for (DbusTestTask * task)
+ {
+ 	g_return_val_if_fail(DBUS_TEST_IS_TASK(task), NULL);
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
+ 
+-	return task->priv->wait_for;
++	return priv->wait_for;
+ }
+ 
+ /**
+@@ -384,8 +403,9 @@
+ dbus_test_task_set_wait_finished (DbusTestTask * task, gboolean wait_till_complete)
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_TASK(task));
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
+ 
+-	task->priv->wait_until_complete = wait_till_complete;
++	priv->wait_until_complete = wait_till_complete;
+ 
+ 	return;
+ }
+@@ -401,8 +421,9 @@
+ dbus_test_task_get_wait_finished (DbusTestTask * task)
+ {
+ 	g_return_val_if_fail(DBUS_TEST_IS_TASK(task), FALSE);
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
+ 
+-	return task->priv->wait_until_complete;
++	return priv->wait_until_complete;
+ }
+ 
+ /**
+@@ -416,8 +437,9 @@
+ dbus_test_task_set_bus (DbusTestTask * task, DbusTestServiceBus bus)
+ {
+ 	g_return_if_fail(DBUS_TEST_IS_TASK(task));
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
+ 
+-	task->priv->preferred_bus = bus;
++	priv->preferred_bus = bus;
+ }
+ 
+ /**
+@@ -430,6 +452,7 @@
+ dbus_test_task_get_bus (DbusTestTask * task)
+ {
+ 	g_return_val_if_fail(DBUS_TEST_IS_TASK(task), DBUS_TEST_SERVICE_BUS_BOTH);
++	DbusTestTaskPrivate *priv = dbus_test_task_get_instance_private(task);
+ 
+-	return task->priv->preferred_bus;
++	return priv->preferred_bus;
+ }
+--- a/libdbustest/task.h
++++ b/libdbustest/task.h
+@@ -40,7 +40,6 @@
+ 
+ typedef struct _DbusTestTask        DbusTestTask;
+ typedef struct _DbusTestTaskClass   DbusTestTaskClass;
+-typedef struct _DbusTestTaskPrivate DbusTestTaskPrivate;
+ 
+ typedef enum
+ {
+@@ -71,7 +70,6 @@
+ 
+ struct _DbusTestTask {
+ 	GObject parent;
+-	DbusTestTaskPrivate * priv;
+ };
+ 
+ #include "service.h"

@@ -1,0 +1,19 @@
+Description: Switch from gnome-common to mate-common build toolchain
+Author: Mike Gabriel <mike.gabriel@das-netzwerkteam.de>
+
+--- a/autogen.sh
++++ b/autogen.sh
+@@ -2,10 +2,9 @@
+ 
+ PKG_NAME="dbus-test-runner"
+ 
+-which gnome-autogen.sh || {
+-	echo "You need gnome-common from GNOME SVN"
++which mate-autogen || {
++	echo "You need mate-common from https://github.com/mate-project/mate-common"
+ 	exit 1
+ }
+ 
+-USE_GNOME2_MACROS=1 \
+-. gnome-autogen.sh
++. mate-autogen

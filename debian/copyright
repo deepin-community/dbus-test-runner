@@ -1,0 +1,97 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: DBus Test Runner
+Upstream-Contact: Ted Gould <ted.gould@ubuntu.com>
+Source: https://launchpad.net/dbus-test-runner
+Comment:
+ We remove some .bzr* VCS files and the debian/ folder from
+ the Ubuntu Bzr checkout that we use as upstream tarball.
+
+Files: libdbustest/bustle.c
+ libdbustest/bustle.h
+ libdbustest/dbus-mock.c
+ libdbustest/dbus-mock.h
+ libdbustest/dbus-test.h
+ libdbustest/glib-compat.h
+ libdbustest/leash.c
+ libdbustest/process.c
+ libdbustest/process.h
+ libdbustest/service.c
+ libdbustest/service.h
+ libdbustest/task.c
+ libdbustest/task.h
+ src/dbus-test-runner.c
+Copyright: 2010, Canonical Ltd
+  2012, Canonical Ltd
+  2013, Canonical Ltd
+License: GPL-3
+
+Files: autogen.sh
+ build.sh
+ libdbustest/watchdog.c
+ libdbustest/watchdog.h
+ tests/delayrm.sh
+ tests/test-bustle-data-check.0.4.sh
+ tests/test-bustle-data-check.sh
+ tests/test-bustle-list.sh
+ tests/test-check-name.c
+ tests/test-libdbustest-getname.c
+ tests/test-libdbustest-mock.c
+ tests/test-libdbustest.c
+ tests/test-own-name.c
+ .bzrignore
+ AUTHORS
+ ChangeLog
+ ChangeLog.bzr
+ MERGE-REVIEW
+ Makefile.am
+ Makefile.am.coverage
+ NEWS
+ README
+ configure.ac
+ data/Makefile.am
+ data/session.conf
+ data/system.conf
+ libdbustest/Makefile.am
+ libdbustest/dbus-mock-iface.xml
+ libdbustest/dbus-test-bustle-handler
+ libdbustest/dbustest.pc.in
+ m4/gcov.m4
+ po/POTFILES.in
+ src/Makefile.am
+ tests/Makefile.am
+ tests/manual
+ tests/test-bustle.0.4.reference
+ tests/test-bustle.reference
+ tests/test-wait-output.reference
+ tests/test-wait-outputer
+Copyright: *No copyright*
+License: GPL-3
+Comment:
+ Assuming same license for all project files.
+
+Files: po/Makefile.in.in
+Copyright: 1995-1997, Ulrich Drepper <drepper@gnu.ai.mit.edu>
+           2004-2008, Rodney Dawes <dobey.pwns@gmail.com>
+License: public-domain~gettext
+ This file may be copied and used freely without restrictions.  It may
+ be used in projects which are not available under a GNU Public License,
+ but which still want to provide support for the GNU gettext functionality.
+
+Files: debian/*
+Copyright: 2009, Ted Gould <ted.gould@canonical.com>
+           2015, Mike Gabriel <mike.gabriel@das-netzwerkteam.de>
+License: GPL-3
+
+License: GPL-3
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License, version 3, as
+ published by the Free Software Foundation.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ On Debian systems, the full text of the GNU General Public
+ License version 3 can be found in the file
+ `/usr/share/common-licenses/GPL-3'.

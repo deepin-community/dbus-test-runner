@@ -1,0 +1,14 @@
+Description: Fix typo in dbus-test-runner options overview
+Author: Mike Gabriel <mike.gabriel@das-netzwerkteam.de>
+
+--- a/src/dbus-test-runner.c
++++ b/src/dbus-test-runner.c
+@@ -200,7 +200,7 @@
+ static gchar * bustle_datafile = NULL;
+ 
+ static GOptionEntry general_options[] = {
+-	{"dbus-daemon",  0,     0,                       G_OPTION_ARG_FILENAME,  &dbus_daemon,     "Path to the DBus deamon to use.  Defaults to 'dbus-daemon'.", "executable"},
++	{"dbus-daemon",  0,     0,                       G_OPTION_ARG_FILENAME,  &dbus_daemon,     "Path to the DBus daemon to use.  Defaults to 'dbus-daemon'.", "executable"},
+ 	{"dbus-config",  'd',   0,                       G_OPTION_ARG_FILENAME,  &dbus_configfile, "Configuration file for newly created DBus server.  Defaults to '" DEFAULT_SESSION_CONF "'.", "config_file"},
+ 	{"bustle-monitor", 0,   0,                       G_OPTION_ARG_FILENAME,  &bustle_cmd,      "Path to the Bustle DBus Monitor to use.  Defaults to 'bustle-dbus-monitor'.", "executable"},
+ 	{"bustle-data",  'b',   0,                       G_OPTION_ARG_FILENAME,  &bustle_datafile, "A file to write out data from the bustle logger to.", "data_file"},

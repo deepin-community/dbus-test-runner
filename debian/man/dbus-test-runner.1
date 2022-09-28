@@ -1,0 +1,95 @@
+'\" -*- coding: utf-8 -*-
+.if \n(.g .ds T< \\FC
+.if \n(.g .ds T> \\F[\n[.fam]]
+.de URL
+\\$2 \(la\\$1\(ra\\$3
+..
+.if \n(.g .mso www.tmac
+.TH dbus-test-runner 1 "Jan 2015" "Version 15.04.20141209" "Development"
+.SH NAME
+dbus-test-runner \- run multiple tasks under an independent DBus session bus
+.SH SYNOPSIS
+'nh
+.fi
+.ad l
+\fBdbus-test-runner\fR \kx
+.if (\nx>(\n(.l/2)) .nr x (\n(.l/5)
+'in \n(.iu+\nxu
+[
+\fIoptions\fR
+]
+'in \n(.iu-\nxu
+.ad b
+'hy
+.SH DESCRIPTION
+\fBdbus-test-runner\fR is a simple little executable for running a couple of programs under a new DBus session.
+.PP
+Use this DBus tool for unit testing of code that accesses DBus at runtime.
+.SH HELP OPTIONS
+\fBdbus-test-runner\fR accepts the following help options on the command line:
+.TP
+\*(T<\fB\-h, \-\-help\fR\*(T>
+Display a short help text with application and help command line options and exit.
+.TP
+\*(T<\fB\-\-help\-all\fR\*(T>
+Display the full list of available command line options (help, task control, application) and exit.
+.TP
+\*(T<\fB\-\-help\-task\-control\fR\*(T>
+Display options that are used to control how the task is handled by the test runner.
+
+.SH TASK CONTROL OPTIONS
+\fBdbus-test-runner\fR accepts the following task control options on the command line:
+.TP
+\*(T<\fB\-t, \-\-task=<executable>\fR\*(T>
+Defines a new task to run under our private DBus session.
+.TP
+\*(T<\fB\-n, \-\-task-name=<name>\fR\*(T>
+A string to label output from the previously defined task.  Defaults to taskN.
+.TP
+\*(T<\fB\-\-task-bus={session|system|both}\fR\*(T>
+Configures which bus the task expects to connect to. Default: both
+.TP
+\*(T<\fB\-r, \-\-ignore\-return\fR\*(T>
+Do not use the return value of the task to calculate whether the test passes or fails.
+.TP
+\*(T<\fB\-i, \-\-invert\return\fR\*(T>
+Invert the return value of the task before calculating whether the test passes or fails.
+.TP
+\*(T<\fB\-p, \-\-parameter\fR\*(T>
+Add a parameter to the call of this utility.  May be called as many times as you'd like.
+.TP
+\*(T<\fB\-f, \-\-wait-for=<dbus-name>\fR\*(T>
+A dbus-name that should appear on the bus before this task is started
+.TP
+\*(T<\fB\-c, \-\-wait\-until\-complete\fR\*(T>
+Signal that we should wait until this task exits even if we don't need the return value
+
+.SH APPLICATION OPTIONS
+\fBdbus-test-runner\fR accepts the following application options on the command line:
+.TP
+\*(T<\fB\-\-dbus\-daemon=<executable>\fR\*(T>
+Path to the DBus daemon to use.  Defaults to 'dbus-daemon'.
+.TP
+\*(T<\fB\-d, \-\-dbus\-config=<config_file>\fR\*(T>
+Configuration file for newly created DBus server.  Defaults to '/usr/share/dbus-test-runner/session.conf'.
+.TP
+\*(T<\fB\-\-bustle\-monitor=<executable>\fR\*(T>
+Path to the Bustle DBus Monitor to use.  Defaults to 'bustle-dbus-monitor'.
+.TP
+\*(T<\fB\-b, \-\-bustle\-data=<data_file>\fR\*(T>
+A file to write out data from the bustle logger to.
+.TP
+\*(T<\fB\-m, \-\-max\-wait=<seconds>\fR\*(T>
+The maximum amount of time the test runner will wait for the test to complete.  Default is 30 seconds.
+.TP
+\*(T<\fB\-\-keep\-env\fR\*(T>
+Whether to propagate the execution environment to the dbus-server and all the services activated by it.  By default the environment is cleared.
+.TP
+\*(T<\fB\-\-bus\-type={session|system|both}\fR\*(T>
+Configures which buses are represented by the tool to the tasks. Default: session
+
+.SH "SEE ALSO"
+\fBhttp://launchpad.net/dbus-test-runner\fR
+.SH AUTHOR
+This manual has been written for the Debian project by
+Mike Gabriel <mike.gabriel@das-netzwerkteam.de> and may be used by others.

@@ -1,0 +1,60 @@
+Source: dbus-test-runner
+Section: devel
+Priority: optional
+Maintainer: Mike Gabriel <sunweaver@debian.org>
+Build-Depends: debhelper (>= 11),
+               dpkg-dev (>= 1.16.1.1),
+               mate-common,
+               xvfb,
+               libdbus-glib-1-dev,
+               dbus,
+               python3-dbusmock,
+               procps,
+Standards-Version: 4.2.1
+Homepage: https://launchpad.net/dbus-test-runner
+Vcs-Git: https://salsa.debian.org/debian/dbus-test-runner.git
+Vcs-Browser: https://salsa.debian.org/debian/dbus-test-runner/
+
+Package: dbus-test-runner
+Architecture: any
+Multi-Arch: foreign
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         dbus,
+         procps,
+Suggests: bustle,
+Description: Runs tests under a new DBus session
+ A simple little executable for running a couple of programs under a
+ new DBus session.
+ .
+ Use this DBus tool for unit testing of code that accesses DBus at
+ runtime.
+
+Package: libdbustest1
+Section: libs
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+Recommends: python3-dbusmock,
+Breaks: dbus-test-runner (<< 15.04.0~),
+Replaces: dbus-test-runner (<< 15.04.0~),
+Description: Runs tests under a new DBus session (shared library)
+ A simple little executable for running a couple of programs under a
+ new DBus session.
+ .
+ This package contains the shared libraries.
+
+Package: libdbustest1-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         libglib2.0-dev,
+         libdbustest1 (= ${binary:Version}),
+Description: Runs tests under a new DBus session (development files)
+ A simple little executable for running a couple of programs under a
+ new DBus session.
+ .
+ This package contains files that are needed for development.

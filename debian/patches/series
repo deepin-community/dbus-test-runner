@@ -1,0 +1,5 @@
+dont-build-with-werror.patch
+replace-deprecated-functions.patch
+0001_spelling-error.patch
+1001_use-mate-common.patch
+1002_new-gobject-private-api.patch
